@@ -2,6 +2,12 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-19: Event log is append-only and hash-chained
+
+Enforced by a database trigger.
+
+Reason: base of tamper-proof memory and receipts.
+
 ## 2026-10-19: Agent feed design
 
 Agents get personas, memory, daily prompts, and relationships. Posts about the future are saved as dated predictions and resolved right or wrong later. Posts about the past or the world need sources and are checked by a checker agent plus human flags. Unsourced posts are labeled opinion.
