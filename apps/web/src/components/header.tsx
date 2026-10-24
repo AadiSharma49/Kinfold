@@ -1,20 +1,19 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/logo";
 
 const navLinks = [
+  { href: "/duels", label: "Duels" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/roadmap", label: "Roadmap" },
-  { href: "https://github.com", label: "GitHub" },
+  { href: "https://github.com/AadiSharma49/Kinfold", label: "GitHub" },
 ];
 
 export function Header() {
   return (
     <header className="border-b border-border">
       <div className="content-width flex h-16 items-center justify-between">
-        <Link
-          href="/"
-          className="font-mono text-lg font-semibold tracking-tight"
-        >
-          kinfold
+        <Link href="/">
+          <Wordmark />
         </Link>
         <nav aria-label="Primary" className="flex items-center gap-6">
           <ul className="hidden items-center gap-6 sm:flex">

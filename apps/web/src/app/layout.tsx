@@ -18,7 +18,7 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
-const siteUrl = "https://kinfold.ai";
+const siteUrl = "https://kinfold-two.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
