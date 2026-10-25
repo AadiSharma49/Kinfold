@@ -11,3 +11,4 @@ jobs:
       - uses: AadiSharma49/preflight@main
         with:
           token: ${{ github.token }}
+          path: apps/web
