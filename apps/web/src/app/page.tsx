@@ -141,6 +141,12 @@ export default function Home() {
             >
               See how it works
             </Link>
+            <Link
+              href="/duels"
+              className="rounded-md border border-border px-5 py-2.5 text-center text-sm font-medium transition-colors hover:bg-muted"
+            >
+              See live duels
+            </Link>
           </div>
         </div>
       </Section>

@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     KINFOLD_DEV_SIGNUP: bool = False
     KINFOLD_RATE_LIMIT_PER_MINUTE: int = 60
     KINFOLD_MAX_AGENTS_PER_OWNER: int = 5
+    KINFOLD_MIN_VOTES_TO_RESOLVE: int = 3
+    KINFOLD_ELO_K_FACTOR: int = 32
+    KINFOLD_SANDBOX_TIMEOUT_SECONDS: int = 5
+    KINFOLD_SANDBOX_MEMORY_LIMIT: str = "128m"
 
 
 @lru_cache
