@@ -184,9 +184,77 @@ the duel resolves, same as the vote itself.
   this matches blind voting; code duels are blinded the same way for
   consistency, even though nothing about verified judging depends on it.
 
+## Deploying to production
+
+This needs a real server with its own Docker daemon — not a typical
+serverless platform. The code sandbox spawns real containers, which means
+the API process needs access to a Docker socket; most "serverless"/PaaS
+platforms (plain Vercel, standard Railway/Render tiers) don't give you that.
+A cheap VPS does. These steps assume a fresh Ubuntu server, e.g. a $6/mo
+DigitalOcean droplet.
+
+**1. On the server:** install Docker, then clone the repo:
+
+```bash
+curl -fsSL https://get.docker.com | sh
+git clone https://github.com/AadiSharma49/Kinfold.git
+cd Kinfold
+```
+
+**2. Point a domain at the server.** Add an A record for your domain (or a
+subdomain, e.g. `api.yourdomain.com`) pointing at the server's IP. Caddy
+(below) needs this to issue a real HTTPS certificate automatically.
+
+**3. Create a second GitHub OAuth App** (don't reuse the one pointed at
+`localhost`) with:
+- Homepage URL: `https://yourdomain.com` (the website's real URL)
+- Authorization callback URL: `https://api.yourdomain.com/v1/auth/github/callback`
+
+**4. Configure environment.** Two separate files, both on the server only,
+neither ever committed:
+
+```bash
+cp .env.prod.example .env.prod   # POSTGRES_PASSWORD, CADDY_DOMAIN
+cp apps/api/.env.example apps/api/.env
+```
+
+In `apps/api/.env`, beyond the usual values, set these for real:
+- **`KINFOLD_DEV_SIGNUP=false`** — this is the one that matters most. Left
+  `true` in production, anyone can create an account with no GitHub login
+  at all. There is no reason this should ever be `true` outside local dev.
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` from the OAuth App in step 3
+- `KINFOLD_PUBLIC_API_URL=https://api.yourdomain.com`
+- `KINFOLD_WEB_URL=https://yourdomain.com`
+- `DATABASE_URL` / `REDIS_URL` are overridden automatically by
+  `docker-compose.prod.yml` to point at the `postgres`/`redis` containers —
+  don't need to be set correctly in this file, compose handles it.
+
+**5. Start everything:**
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+docker compose -f docker-compose.prod.yml exec api uv run alembic upgrade head
+```
+
+**6. Check it:**
+
+```bash
+curl https://api.yourdomain.com/v1/health
+```
+
+Then update the website's deployment (Vercel) with
+`KINFOLD_API_URL=https://api.yourdomain.com` so the live site's `/duels`
+pages can actually reach it.
+
+**Known tradeoff, not an oversight:** the `api` container mounts
+`/var/run/docker.sock` to spawn sandbox containers as siblings. That's
+equivalent to root on the host — if the API process itself were ever
+compromised, so is the server. Accepted for now given the scale; a properly
+isolated sandbox-runner service is the real fix if this ever needs to
+harden further.
+
 ## What's left for later
 
-- GitHub OAuth (replaces `POST /owners/dev-signup`)
 - Languages other than Python for code duels
 - Sourcing hidden tests from a neutral problem bank instead of the duel creator
 - The weekly training loop
