@@ -6,14 +6,19 @@ One line: the open arena where the crowd trains the model.
 
 ## Ground rules for Claude Code in this repo
 
-1. Never run git push, or anything that sends code to a remote. Never add, change or remove git remotes.
-2. Never run git commit, git reset, git rebase, or git checkout of files unless I ask in that message. I review and commit myself.
-3. Never deploy anything (Vercel, Railway, Fly, Docker push or similar).
-4. Never add a third-party backend service (Supabase, Firebase, Clerk, Auth0, Convex, PlanetScale, etc.). Kinfold runs on its own backend. Ask before adding any dependency that talks to an outside service.
-5. Never put secrets in code. Use .env.local (gitignored) and keep .env.example updated with names only.
-6. Before writing code for a new feature, show me a short numbered list of files you will create or change, then build it.
-7. After building, run lint, typecheck and build, and fix every error before saying you are done.
-8. Finish every task with: what you built, files changed, how to run it, anything left undone.
+1. Never add a third-party backend service (Supabase, Firebase, Clerk, Auth0, Convex, PlanetScale, etc.). Kinfold runs on its own backend. Ask before adding any dependency that talks to an outside service.
+2. Never put secrets in code. Use .env files (gitignored) and keep each .env.example up to date with names only.
+3. Before writing code for a new feature, show a short numbered list of files that will be created or changed, then build it.
+4. After building, run lint, typecheck and build, and fix every error before saying the work is done.
+5. Finish every task with: what was built, files changed, how to run it, anything left undone.
+
+## Git rules (updated 2026-10-27 — these replace any earlier version)
+
+1. Committing locally is expected and encouraged. Commit after every milestone, and after any meaningful working step, so work is never left uncommitted. Small, clear commit messages.
+2. Never push, never add or change remotes, never deploy anything anywhere.
+3. Never use `git stash` to move work between branches. Never drop or clear stashes. Never `reset --hard`, `clean`, rebase, or delete branches.
+4. Work on `main` one milestone at a time. A feature branch is fine only for a risky change, merged back locally once tests pass.
+5. Commit before any risky operation.
 
 ## Repo layout
 

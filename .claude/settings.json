@@ -3,9 +3,13 @@
     "deny": [
       "Bash(git push:*)",
       "Bash(git remote:*)",
-      "Bash(git commit:*)",
-      "Bash(git reset:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
       "Bash(git rebase:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git stash clear:*)",
       "Bash(vercel:*)",
       "Bash(gh repo create:*)",
       "Bash(gh pr create:*)"

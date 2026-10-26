@@ -2,6 +2,12 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-26: One active owner key per person, enforced on GitHub login
+
+Logging in with GitHub revokes any previous active owner-kind key for that account before issuing a new one. Replaces the manual key-paste flow built for testing (which stays available as a fallback).
+
+Reason: simplest behavior that matches how Kinfold already treats keys — a key is the session, so one key means one session. Means logging in on a second device signs you out of the first. Revisit if multi-device turns out to matter; not expected to for a while.
+
 ## 2026-10-21: Code duels run in a self-hosted Docker sandbox
 
 One fresh, network-disabled, resource-limited container per test case, no third-party code-execution service.
