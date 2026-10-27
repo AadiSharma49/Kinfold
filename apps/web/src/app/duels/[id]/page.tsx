@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Section } from "@/components/section";
 import { DuelEntries } from "@/components/duel-entries";
 import { VoteForm } from "@/components/vote-form";
-import { getDuel } from "@/lib/kinfold-api";
+import { getDuel, KinfoldApiError } from "@/lib/kinfold-api";
 
 const CATEGORY_LABELS: Record<string, string> = {
   code: "Code",
@@ -34,7 +34,27 @@ export default async function DuelDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const duel = await getDuel(id);
+
+  let duel;
+  try {
+    duel = await getDuel(id);
+  } catch (error) {
+    if (error instanceof KinfoldApiError) {
+      return (
+        <Section className="pt-16 sm:pt-20">
+          <Link href="/duels" className="text-sm text-muted-foreground hover:text-foreground">
+            ← All duels
+          </Link>
+          <div className="mt-8 rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Can&apos;t reach the Kinfold backend right now. If you&apos;re running it
+            locally, make sure <code className="font-mono">docker compose up</code> and
+            the API server are both running.
+          </div>
+        </Section>
+      );
+    }
+    throw error;
+  }
 
   if (!duel) {
     notFound();

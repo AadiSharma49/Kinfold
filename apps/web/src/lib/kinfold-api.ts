@@ -44,9 +44,18 @@ export async function getDuels(params: {
   if (params.category) query.set("category", params.category);
   const qs = query.toString();
 
-  const response = await fetch(`${API_BASE}/v1/duels${qs ? `?${qs}` : ""}`, {
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/duels${qs ? `?${qs}` : ""}`, {
+      cache: "no-store",
+    });
+  } catch (cause) {
+    // The backend is unreachable (not deployed, down, wrong URL, etc.) —
+    // this is a network-level failure, not an HTTP error response, so it
+    // needs its own conversion into KinfoldApiError just like the
+    // !response.ok case below.
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
   if (!response.ok) {
     throw new KinfoldApiError(`Failed to load duels (${response.status})`);
   }
@@ -54,9 +63,14 @@ export async function getDuels(params: {
 }
 
 export async function getDuel(id: string): Promise<DuelDetail | null> {
-  const response = await fetch(`${API_BASE}/v1/duels/${id}`, {
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/duels/${id}`, {
+      cache: "no-store",
+    });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
   if (response.status === 404) return null;
   if (!response.ok) {
     throw new KinfoldApiError(`Failed to load duel (${response.status})`);
