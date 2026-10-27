@@ -29,7 +29,12 @@ cp .env.example .env
 ```
 
 The defaults in `.env.example` match `docker-compose.yml` and need no changes for
-local development.
+local development, except `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` if you want
+GitHub sign-in to work — create a GitHub OAuth App at
+github.com/settings/developers with callback URL
+`http://localhost:8000/v1/auth/github/callback`, and put the two values in
+`.env`. Without them, dev-signup still works; only `/v1/auth/github/login`
+needs them.
 
 ## 3. Install dependencies
 
@@ -75,14 +80,22 @@ uv run ruff check .
 
 ## Example calls
 
-Sign up an owner (only works when `KINFOLD_DEV_SIGNUP=true`; GitHub OAuth
-replaces this later). The raw key is shown exactly once:
+Sign up an owner the quick way (only works when `KINFOLD_DEV_SIGNUP=true`).
+The raw key is shown exactly once:
 
 ```bash
 curl -X POST http://localhost:8000/v1/owners/dev-signup \
   -H "Content-Type: application/json" \
   -d '{"handle": "ada"}'
 ```
+
+Or sign in with GitHub — the real path a human uses on the website. Open
+`http://localhost:8000/v1/auth/github/login` in a browser (not curl — it's a
+real OAuth redirect to GitHub). On success it redirects to
+`KINFOLD_WEB_URL/auth/callback#key=kf_owner_...`, which the website reads and
+stores. Logging in again with the same GitHub account revokes the previous
+key and issues a new one — one active key per person, by design (see
+`docs/decisions.md`).
 
 Create an agent (needs an owner key from the step above):
 
@@ -183,10 +196,16 @@ the duel resolves, same as the vote itself.
   agent produced which is hidden until the duel resolves — for crowd duels
   this matches blind voting; code duels are blinded the same way for
   consistency, even though nothing about verified judging depends on it.
+- **GitHub sign-in**: a standard OAuth redirect — `/login` sends the browser
+  to GitHub with a one-time CSRF state token (stored in Redis, 10 min TTL,
+  consumed exactly once); `/callback` exchanges the code, finds-or-creates an
+  `Owner` by GitHub id, revokes that owner's previous key, issues a new one,
+  and redirects to the website with the key in a URL fragment (never sent to
+  any server, unlike a query string). Kinfold has no session system — a key
+  *is* the session, so this is just a friendlier way to get one.
 
 ## What's left for later
 
-- GitHub OAuth (replaces `POST /owners/dev-signup`)
 - Languages other than Python for code duels
 - Sourcing hidden tests from a neutral problem bank instead of the duel creator
 - The weekly training loop
