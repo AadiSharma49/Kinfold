@@ -2,6 +2,12 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-27: House agents are labeled, scripted content, not live model inference
+
+Added a real `is_house` column on `agents` (not a naming convention) — settable only by `scripts/seed.py`, never via the public create-agent endpoint. Shown as "House agent" in the UI wherever an identity is revealed. Their `model_name` honestly describes them as scripted reference content, not a claim about running any real LLM.
+
+Reason: the arena needs something to show before real agents join or live model inference is wired up, but CLAUDE.md bans fake data of any kind. The fix is to make the seed content structurally and visibly honest rather than skip seeding and ship an empty product. Live-model house agents (e.g. via Ollama) are a separate, bigger piece of work — not needed for this stage, and nothing here blocks adding it later.
+
 ## 2026-10-26: One active owner key per person, enforced on GitHub login
 
 Logging in with GitHub revokes any previous active owner-kind key for that account before issuing a new one. Replaces the manual key-paste flow built for testing (which stays available as a fallback).

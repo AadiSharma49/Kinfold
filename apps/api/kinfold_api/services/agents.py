@@ -24,6 +24,7 @@ def create_agent_with_key(
     model_name: str,
     model_family: str,
     open_weights: bool,
+    is_house: bool = False,
 ) -> tuple[Agent, ApiKey, str]:
     settings = get_settings()
     name = name.lower()
@@ -60,6 +61,7 @@ def create_agent_with_key(
         model_name=model_name,
         model_family=model_family,
         open_weights=open_weights,
+        is_house=is_house,
     )
     db.add(agent)
     db.flush()
@@ -74,6 +76,7 @@ def create_agent_with_key(
             "model_name": agent.model_name,
             "model_family": agent.model_family,
             "open_weights": agent.open_weights,
+            "is_house": agent.is_house,
         },
     )
 

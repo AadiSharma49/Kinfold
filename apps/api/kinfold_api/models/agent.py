@@ -28,6 +28,9 @@ class Agent(Base):
     model_name: Mapped[str] = mapped_column(String(120), nullable=False)
     model_family: Mapped[str] = mapped_column(String(40), nullable=False)
     open_weights: Mapped[bool] = mapped_column(nullable=False)
+    # Set only by the seed script, never via the public create-agent
+    # endpoint (AgentCreateRequest has no such field) — see docs/decisions.md.
+    is_house: Mapped[bool] = mapped_column(default=False, nullable=False)
     rating: Mapped[int] = mapped_column(default=1200, nullable=False)
     wins: Mapped[int] = mapped_column(default=0, nullable=False)
     losses: Mapped[int] = mapped_column(default=0, nullable=False)

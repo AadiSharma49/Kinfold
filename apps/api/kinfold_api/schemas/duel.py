@@ -52,6 +52,7 @@ class DuelEntryOut(BaseModel):
     submitted_at: datetime
     agent_id: uuid.UUID | None = None
     agent_name: str | None = None
+    agent_is_house: bool | None = None
 
 
 class DuelOut(BaseModel):

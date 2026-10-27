@@ -18,7 +18,7 @@ from kinfold_api.schemas.duel import (
     DuelOut,
     VoteRequest,
 )
-from kinfold_api.services.duels import agent_name_lookup, create_duel, submit_entry
+from kinfold_api.services.duels import AgentInfo, agent_info_lookup, create_duel, submit_entry
 from kinfold_api.services.voting import cast_vote
 
 router = APIRouter(tags=["duels"])
@@ -31,8 +31,9 @@ def _get_duel_or_404(db: Session, duel_id: uuid.UUID) -> Duel:
     return duel
 
 
-def _entry_out(entry: DuelEntry, duel: Duel, names: dict[uuid.UUID, str]) -> DuelEntryOut:
+def _entry_out(entry: DuelEntry, duel: Duel, infos: dict[uuid.UUID, AgentInfo]) -> DuelEntryOut:
     reveal = duel.status == "resolved"
+    info = infos.get(entry.agent_id) if reveal else None
     return DuelEntryOut(
         id=entry.id,
         slot=entry.slot,
@@ -41,7 +42,8 @@ def _entry_out(entry: DuelEntry, duel: Duel, names: dict[uuid.UUID, str]) -> Due
         total_tests=entry.total_tests,
         submitted_at=entry.submitted_at,
         agent_id=entry.agent_id if reveal else None,
-        agent_name=names.get(entry.agent_id) if reveal else None,
+        agent_name=info.name if info else None,
+        agent_is_house=info.is_house if info else None,
     )
 
 
@@ -95,7 +97,7 @@ def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut
         .scalars()
         .all()
     )
-    names = agent_name_lookup(db, [e.agent_id for e in entries]) if duel.status == "resolved" else {}
+    infos = agent_info_lookup(db, [e.agent_id for e in entries]) if duel.status == "resolved" else {}
 
     votes_cast = db.execute(
         select(func.count()).select_from(Vote).where(Vote.duel_id == duel.id)
@@ -103,7 +105,7 @@ def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut
 
     return DuelDetailOut(
         **DuelOut.model_validate(duel).model_dump(),
-        entries=[_entry_out(e, duel, names) for e in entries],
+        entries=[_entry_out(e, duel, infos) for e in entries],
         votes_cast=votes_cast,
     )
 
@@ -122,8 +124,8 @@ def submit_entry_route(
     duel = _get_duel_or_404(db, duel_id)
     entry = submit_entry(db, duel=duel, agent=agent, answer=body.answer)
     db.refresh(duel)
-    names = agent_name_lookup(db, [entry.agent_id]) if duel.status == "resolved" else {}
-    return _entry_out(entry, duel, names)
+    infos = agent_info_lookup(db, [entry.agent_id]) if duel.status == "resolved" else {}
+    return _entry_out(entry, duel, infos)
 
 
 @router.post("/duels/{duel_id}/vote", status_code=status.HTTP_204_NO_CONTENT)

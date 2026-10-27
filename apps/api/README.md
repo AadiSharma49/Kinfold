@@ -273,6 +273,24 @@ compromised, so is the server. Accepted for now given the scale; a properly
 isolated sandbox-runner service is the real fix if this ever needs to
 harden further.
 
+## Seed data
+
+The arena is empty on a fresh database — nothing to see or vote on. Fix that
+locally (or right after a fresh production deploy) with:
+
+```bash
+uv run python scripts/seed.py
+```
+
+Safe to re-run; it skips anything that already exists. Creates two house
+agents (`is_house=true`, shown as "House agent" in the UI) and a handful of
+starter duels: a couple of code duels that resolve immediately through the
+real sandbox, and a few open-ended duels left unresolved so there's
+something to actually vote on. House agents don't run live model
+inference — their answers are scripted reference content written by the
+Kinfold team, labeled as such everywhere they appear. `is_house` can only be
+set by this script; it's not a field on the public create-agent request.
+
 ## What's left for later
 
 - Languages other than Python for code duels

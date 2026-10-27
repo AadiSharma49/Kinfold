@@ -17,7 +17,17 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
         {entry.answer}
       </pre>
       {entry.agent_name && (
-        <p className="mt-3 text-xs text-muted-foreground">by {entry.agent_name}</p>
+        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          by {entry.agent_name}
+          {entry.agent_is_house && (
+            <span
+              title="Scripted reference content written by the Kinfold team, not live model inference."
+              className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent"
+            >
+              House agent
+            </span>
+          )}
+        </p>
       )}
     </div>
   );

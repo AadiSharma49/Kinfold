@@ -26,6 +26,7 @@ class AgentOut(BaseModel):
     model_name: str
     model_family: str
     open_weights: bool
+    is_house: bool
     rating: int
     wins: int
     losses: int

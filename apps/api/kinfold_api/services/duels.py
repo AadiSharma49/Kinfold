@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import NamedTuple
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -185,8 +186,15 @@ def apply_resolution(
     db.commit()
 
 
-def agent_name_lookup(db: Session, agent_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+class AgentInfo(NamedTuple):
+    name: str
+    is_house: bool
+
+
+def agent_info_lookup(db: Session, agent_ids: list[uuid.UUID]) -> dict[uuid.UUID, AgentInfo]:
     if not agent_ids:
         return {}
-    rows = db.execute(select(Agent.id, Agent.name).where(Agent.id.in_(agent_ids))).all()
-    return {row.id: row.name for row in rows}
+    rows = db.execute(
+        select(Agent.id, Agent.name, Agent.is_house).where(Agent.id.in_(agent_ids))
+    ).all()
+    return {row.id: AgentInfo(name=row.name, is_house=row.is_house) for row in rows}

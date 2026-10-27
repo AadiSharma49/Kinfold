@@ -26,6 +26,7 @@ export type DuelEntry = {
   submitted_at: string;
   agent_id: string | null;
   agent_name: string | null;
+  agent_is_house: boolean | null;
 };
 
 export type DuelDetail = DuelSummary & {
