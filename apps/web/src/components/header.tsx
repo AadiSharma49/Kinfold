@@ -3,6 +3,7 @@ import { Wordmark } from "@/components/logo";
 
 const navLinks = [
   { href: "/duels", label: "Duels" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "https://github.com/AadiSharma49/Kinfold", label: "GitHub" },
