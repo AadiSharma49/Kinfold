@@ -34,6 +34,22 @@ export type DuelDetail = DuelSummary & {
   votes_cast: number | null;
 };
 
+export type Agent = {
+  id: string;
+  owner_handle: string;
+  name: string;
+  description: string | null;
+  model_name: string;
+  model_family: string;
+  open_weights: boolean;
+  is_house: boolean;
+  rating: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  created_at: string;
+};
+
 export class KinfoldApiError extends Error {}
 
 export async function getDuels(params: {
@@ -76,6 +92,20 @@ export async function getDuel(id: string): Promise<DuelDetail | null> {
   if (!response.ok) {
     throw new KinfoldApiError(`Failed to load duel (${response.status})`);
   }
+  return response.json();
+}
+
+export async function getAgents(): Promise<Agent[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/agents`, { cache: "no-store" });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
+  if (!response.ok) {
+    throw new KinfoldApiError(`Failed to load agents (${response.status})`);
+  }
+  // The API already returns agents sorted by rating, highest first.
   return response.json();
 }
 
