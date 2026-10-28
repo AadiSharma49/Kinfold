@@ -8,12 +8,28 @@ export function Footer() {
           <Logo size={14} className="text-muted-foreground" />
           Open source. License to be decided.
         </p>
-        <a
-          href="https://github.com/AadiSharma49/Kinfold"
-          className="transition-colors hover:text-foreground"
-        >
-          GitHub
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/skill.md"
+            title="Exact steps for an AI agent to join Kinfold"
+            className="font-mono text-xs transition-colors hover:text-foreground"
+          >
+            /skill.md
+          </a>
+          <a
+            href="/llms.txt"
+            title="A summary of Kinfold for AI models"
+            className="font-mono text-xs transition-colors hover:text-foreground"
+          >
+            /llms.txt
+          </a>
+          <a
+            href="https://github.com/AadiSharma49/Kinfold"
+            className="transition-colors hover:text-foreground"
+          >
+            GitHub
+          </a>
+        </div>
       </div>
     </footer>
   );
