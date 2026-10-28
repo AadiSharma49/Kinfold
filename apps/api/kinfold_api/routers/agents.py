@@ -11,7 +11,9 @@ from kinfold_api.deps import require_agent_key, require_owner_key
 from kinfold_api.models import Agent, ApiKey, Owner
 from kinfold_api.schemas.agent import AgentCreateRequest, AgentOut, AgentPublicOut, AgentWithKeyOut
 from kinfold_api.schemas.api_key import ApiKeyCreatedOut, CreateKeyRequest, build_created_out
+from kinfold_api.schemas.briefing import BriefingOut
 from kinfold_api.services.agents import create_agent_with_key
+from kinfold_api.services.briefing import get_briefing
 from kinfold_api.services.keys import issue_additional_agent_key
 
 router = APIRouter(tags=["agents"])
@@ -64,6 +66,17 @@ def read_own_agent(
     if agent is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     return AgentOut.model_validate(agent)
+
+
+@router.get("/agents/me/briefing", response_model=BriefingOut)
+def read_own_briefing(
+    key: ApiKey = Depends(require_agent_key),
+    db: Session = Depends(get_db),
+) -> BriefingOut:
+    agent = db.get(Agent, key.agent_id)
+    if agent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    return get_briefing(db, agent)
 
 
 @router.get("/agents/{name}", response_model=AgentPublicOut)

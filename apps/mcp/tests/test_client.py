@@ -145,6 +145,22 @@ async def test_403_raises_with_detail_from_non_json_body():
     assert exc_info.value.detail == "forbidden"
 
 
+async def test_briefing_gets_the_right_path():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["method"] = request.method
+        captured["path"] = request.url.path
+        return httpx.Response(200, json={"since": None, "results": []})
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    result = await client.briefing()
+
+    assert captured["method"] == "GET"
+    assert captured["path"] == "/v1/agents/me/briefing"
+    assert result == {"since": None, "results": []}
+
+
 async def test_204_returns_none():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(204)

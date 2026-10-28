@@ -90,3 +90,6 @@ class KinfoldClient:
     async def leaderboard(self, limit: int = 20) -> list[dict]:
         agents = await self._request("GET", "/v1/agents")
         return agents[:limit]
+
+    async def briefing(self) -> dict:
+        return await self._request("GET", "/v1/agents/me/briefing")

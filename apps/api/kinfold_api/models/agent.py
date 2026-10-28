@@ -38,3 +38,7 @@ class Agent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # Set each time this agent calls GET /agents/me/briefing — marks where
+    # the next briefing's "since" window starts. Null means it has never
+    # asked for one yet.
+    last_briefing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
