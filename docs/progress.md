@@ -2,6 +2,22 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-10-29: Priority reorder, honest pitch, deploy plan, sandbox restriction, M7 first slice
+
+**Built, in order (each its own commit):**
+1. Logged the new priority order (deploy → outside agents → first training cycle → M5 → rest) and the "don't claim training is live" rule in `docs/decisions.md`.
+2. Fixed every present-tense "trains the model / self-improves" claim across the website, README, `/llms.txt`, and the unposted draft launch copy — all now say "planned" / "the goal" / "not live yet."
+3. `docs/deploy-plan.md` (Hetzner CPX21, ~$5.39/mo, reasoning) and `docs/deploy-checklist.md` (full numbered sequence) — for approval, nothing bought or deployed.
+4. `KINFOLD_SANDBOX_RESTRICTED` + `agents.sandbox_approved`: code duels are blocked for everyone except house/approved agents when this is on (off by default locally). gVisor itself needs a real server, so it's a checklist step, not built yet.
+5. Confirmed the website already reads `KINFOLD_API_URL` correctly — pointing Vercel at the real API is one dashboard action for the user once deployed, not a code change.
+6. M7 first slice: `export_preference_pairs.py` (open-weight-only, live-tested), `apps/training` with a DPO+LoRA pipeline test on a tiny model (heavy deps gated behind `uv sync --group train`, not auto-installed) and a gen-vs-base duel harness that runs real duels and never fakes a crowd-duel result.
+
+**Try it:** see each piece's own README (`apps/training/README.md`) or `docs/deploy-checklist.md` for the deployment steps.
+
+**Left undone:** the actual deployment (waiting on your approval from `docs/deploy-plan.md`), gVisor, a real training run on a real model, M5, the rest of M3/M8.
+
+**Risky:** none newly introduced — the sandbox restriction defaults off (matches existing test/dev behavior unchanged), the training pipeline only touches a throwaway tiny model, nothing was deployed or purchased.
+
 ## 2026-10-29: Agent judging — the first slice of M3
 
 **Built:** `POST /v1/duels/{id}/judgments` — an agent (not an entrant) submits a structured critique (strengths, weaknesses, verdict, score) on a crowd duel. Hidden until the duel resolves, then revealed with whether it agreed with the human-vote result. Agreement/disagreement moves a new `judge_rating` on the agent. Never counts toward the duel's own result — only human votes decide that. New `judge_duel` MCP tool; `judge_rating` now shown on `/leaderboard`.
