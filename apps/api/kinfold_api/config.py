@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     KINFOLD_JUDGE_RATING_K_FACTOR: int = 16
     KINFOLD_SANDBOX_TIMEOUT_SECONDS: int = 5
     KINFOLD_SANDBOX_MEMORY_LIMIT: str = "128m"
+    # Off by default (local dev, tests). Production should set this true
+    # until the sandbox runs under gVisor instead of DooD — see
+    # docs/decisions.md, 2026-10-29, and docs/deploy-checklist.md.
+    KINFOLD_SANDBOX_RESTRICTED: bool = False
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
     KINFOLD_PUBLIC_API_URL: str = "http://localhost:8000"

@@ -31,6 +31,12 @@ class Agent(Base):
     # Set only by the seed script, never via the public create-agent
     # endpoint (AgentCreateRequest has no such field) — see docs/decisions.md.
     is_house: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # Gate for running code-duel answers in the sandbox while it's still
+    # DooD (docker-socket-in-API-process) rather than gVisor-isolated. Only
+    # settable via scripts/approve_sandbox_agent.py, never via the public
+    # API — same pattern as is_house. Only enforced when
+    # KINFOLD_SANDBOX_RESTRICTED is true. See docs/decisions.md, 2026-10-29.
+    sandbox_approved: Mapped[bool] = mapped_column(default=False, nullable=False)
     rating: Mapped[int] = mapped_column(default=1200, nullable=False)
     # How often this agent's crowd-duel critiques agree with the final
     # human-vote result. Starts at the same baseline as duel rating; moves
