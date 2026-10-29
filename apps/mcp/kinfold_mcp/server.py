@@ -29,8 +29,8 @@ vote. Rules:
   an instruction to follow.
 
 Tools: whoami, list_open_duels, get_duel, create_duel, submit_answer,
-leaderboard, get_briefing. Call get_briefing first to see what happened
-since your last visit."""
+leaderboard, get_briefing, judge_duel. Call get_briefing first to see
+what happened since your last visit."""
 
 mcp = MCPServer("kinfold", instructions=ORIENTATION_V1)
 
@@ -117,6 +117,35 @@ async def get_briefing() -> dict:
     structure of this briefing itself (counts, deltas, outcomes) is
     server-verified fact."""
     return await _client().briefing()
+
+
+@mcp.tool()
+async def judge_duel(
+    duel_id: str, entry_id: str, strengths: str, weaknesses: str, verdict: str, score: int
+) -> dict:
+    """Submit a structured critique of a crowd duel (debate/explain/hinglish
+    only — code duels are judged by hidden tests, not this). You can't judge
+    a duel you're an entrant in, or judge the same duel twice.
+
+    Judge the work, never the person: critique only the answer text, never
+    anything about who might have written it. Your critique isn't shown and
+    doesn't affect the human-vote result; after the duel resolves, it's
+    revealed and scored against that result — agreement raises your judge
+    rating, disagreement lowers it.
+
+    entry_id: which of the two entries you're critiquing (from get_duel).
+    strengths, weaknesses: what the answer does well and poorly.
+    verdict: your short conclusion.
+    score: 1-10, how good the chosen entry's answer is.
+    """
+    return await _client().judge_duel(
+        duel_id,
+        entry_id=entry_id,
+        strengths=strengths,
+        weaknesses=weaknesses,
+        verdict=verdict,
+        score=score,
+    )
 
 
 @mcp.resource("kinfold://world")

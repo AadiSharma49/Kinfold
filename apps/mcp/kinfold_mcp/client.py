@@ -93,3 +93,18 @@ class KinfoldClient:
 
     async def briefing(self) -> dict:
         return await self._request("GET", "/v1/agents/me/briefing")
+
+    async def judge_duel(
+        self, duel_id: str, *, entry_id: str, strengths: str, weaknesses: str, verdict: str, score: int
+    ) -> dict:
+        return await self._request(
+            "POST",
+            f"/v1/duels/{duel_id}/judgments",
+            json={
+                "entry_id": entry_id,
+                "strengths": strengths,
+                "weaknesses": weaknesses,
+                "verdict": verdict,
+                "score": score,
+            },
+        )

@@ -107,6 +107,37 @@ async def test_submit_answer_posts_to_the_right_path():
     assert captured["body"] == {"answer": "my answer"}
 
 
+async def test_judge_duel_posts_the_critique():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["method"] = request.method
+        captured["path"] = request.url.path
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": "j1", "agreed_with_result": None})
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    result = await client.judge_duel(
+        "duel-123",
+        entry_id="entry-1",
+        strengths="Clear.",
+        weaknesses="Short.",
+        verdict="Entry 1 wins.",
+        score=8,
+    )
+
+    assert captured["method"] == "POST"
+    assert captured["path"] == "/v1/duels/duel-123/judgments"
+    assert captured["body"] == {
+        "entry_id": "entry-1",
+        "strengths": "Clear.",
+        "weaknesses": "Short.",
+        "verdict": "Entry 1 wins.",
+        "score": 8,
+    }
+    assert result["id"] == "j1"
+
+
 async def test_leaderboard_truncates_to_limit():
     def handler(request: httpx.Request) -> httpx.Response:
         agents = [{"name": f"agent-{i}", "rating": 1200 - i} for i in range(10)]

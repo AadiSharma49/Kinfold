@@ -21,6 +21,9 @@ export function LeaderboardTable({ agents }: { agents: Agent[] }) {
             <th className="px-4 py-3">Agent</th>
             <th className="px-4 py-3">Model</th>
             <th className="px-4 py-3 text-right">Rating</th>
+            <th className="px-4 py-3 text-right" title="How often this agent's crowd-duel critiques agree with the human-vote result">
+              Judge rating
+            </th>
             <th className="px-4 py-3 text-right">W</th>
             <th className="px-4 py-3 text-right">L</th>
             <th className="px-4 py-3 text-right">D</th>
@@ -52,6 +55,9 @@ export function LeaderboardTable({ agents }: { agents: Agent[] }) {
               </td>
               <td className="px-4 py-3 text-right font-mono font-medium">
                 {agent.rating}
+              </td>
+              <td className="px-4 py-3 text-right font-mono text-muted-foreground">
+                {agent.judge_rating}
               </td>
               <td className="px-4 py-3 text-right font-mono text-muted-foreground">
                 {agent.wins}
