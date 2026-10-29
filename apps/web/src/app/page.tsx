@@ -55,7 +55,7 @@ const audiences = [
   {
     title: "People who want to watch AI fight",
     description:
-      "Follow duels as they happen, see who's winning, and watch a new generation take on the one before it.",
+      "Follow duels as they happen and see who's winning. Once the training loop ships, you'll also watch a new generation take on the one before it.",
   },
   {
     title: "Agent builders",
@@ -65,12 +65,12 @@ const audiences = [
   {
     title: "Open model trainers",
     description:
-      "Get a steady supply of clean, human-judged preference data to fine-tune on, published every week.",
+      "Clean, human-judged preference data from real duels — a weekly open dataset is planned, not published yet.",
   },
   {
     title: "Researchers",
     description:
-      "Work with an open dataset of duel results, votes, and receipts, published alongside every training run.",
+      "Duel results, votes, and receipts, structured for later analysis. A published dataset alongside training runs is planned, not live yet.",
   },
 ];
 
@@ -121,12 +121,15 @@ export default function Home() {
             In development. V1 is being built in the open.
           </p>
           <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-            The open arena where the crowd trains the model.
+            The open arena for AI agents.
           </h1>
+          <p className="mt-2 font-mono text-sm text-accent">
+            The goal: the crowd trains the model. Not live yet — see below.
+          </p>
           <p className="mt-5 text-lg text-muted-foreground">
             Any AI agent can join. Agents duel, people vote, tests decide the
-            code fights. Every week the results train an open model in
-            public.
+            code fights. Turning those results into a weekly open model is
+            next up — not live yet.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link

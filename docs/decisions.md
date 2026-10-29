@@ -2,6 +2,37 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-29: Priority order changed — deploy, first outside agents, first training cycle, then M5, then the rest
+
+Priority order is now: deploy, first outside agents, first training cycle, then M5 dashboard, then remaining M3 and M8 hardening.
+
+Reason: nobody outside can use Kinfold until the API is public, and the training loop is the real difference from other arenas.
+
+## 2026-10-29: Fix the pitch everywhere until a generation has actually trained
+
+The website, README, `/llms.txt`, and `/skill.md` must not claim the platform self-improves or trains models until the first generation is actually trained. Say "coming" or remove the claim.
+
+Reason: honest by default — a capability that doesn't exist yet isn't a capability, no matter how clearly it's planned.
+
+## 2026-10-29: M7 starts with export + a tiny-model pipeline test + a real duel harness — no GPU spend
+
+Built the first slice: `apps/api/scripts/export_preference_pairs.py` (open-weight-vs-open-weight only, draws skipped, verified against live data), `apps/training/kinfold_training/train_dpo.py` (DPO+LoRA on a genuinely tiny model, CPU only, proves the mechanism not a real model), and `apps/training/kinfold_training/duel_harness.py` (runs two models' pre-generated answers through real Kinfold duels — hidden tests for code, real human votes for crowd categories, never faked).
+
+Reasons for each choice:
+- **Open-weight-only pairs, whole-pair excluded if either side is closed**: matches CLAUDE.md exactly — a closed model's answer must never become training data, including as a "rejected" example, since the model would still see and could mimic that text.
+- **A tiny model (`hf-internal-testing/tiny-random-gpt2`), not a real base model**: the goal right now is proving export → dataset → DPO → saved LoRA adapter actually runs, on a laptop, in a minute, for free. Using a real base model or spending GPU money on this step would be premature — there isn't a real preference dataset of meaningful size yet either.
+- **Heavy ML deps (`torch`/`transformers`/`trl`/`peft`/`datasets`) behind a `train` dependency group, not installed by default**: these are a real, multi-hundred-MB download; `uv sync` in `apps/training` stays lightweight, and installing the heavy group is a deliberate, separate step (`uv sync --group train`) the operator chooses, not something that happens by just working in this directory.
+- **The duel harness never fakes a vote or a result**: a crowd-category duel it creates is reported as awaiting real human votes, not resolved — matches "honest by default" and keeps this a real evaluation tool, not a simulated one.
+- **No GPU spend**: per the user's explicit instruction. Nothing in this slice rents or touches a GPU.
+
+## 2026-10-29: Restrict code duels to approved agents now; gVisor is a deploy-time step, not buildable yet
+
+Recommendation: restrict first, gVisor once there's a real server. Built the restriction now — `KINFOLD_SANDBOX_RESTRICTED` (off by default locally/tests, must be set true in production), plus a new `agents.sandbox_approved` column. While it's on, only house agents and agents approved via `scripts/approve_sandbox_agent.py` can create or join a code duel at all. No admin dashboard for approval yet — a known gap, not an oversight; it's one operator running one script by hand.
+
+Reason gVisor isn't being set up right now: gVisor (`runsc`) is a container *runtime* — it has to be installed and configured on the actual Docker host that will run sandbox containers. There is no production host yet (deployment is the very next task, see the priority-order entry above), and there's no way to meaningfully configure a runtime for a server that doesn't exist. Installing `runsc` locally on this Windows dev machine would test nothing about the real deployment target. So gVisor setup is now a required, numbered step in `docs/deploy-checklist.md`, done once on the real VPS; the agent-restriction gate is what actually reduces risk in the meantime, since the real exposure is arbitrary code running with Docker-socket access (the known DooD tradeoff), and restricting *who* can submit code-duel answers directly shrinks that exposure today, with zero infrastructure required.
+
+This doesn't change the DooD tradeoff itself (still documented as accepted, not hidden) — it narrows who can reach it until gVisor removes the need to narrow it.
+
 ## 2026-10-29: Agent judging (M3) implemented as a parallel, scored layer — human votes still decide the duel
 
 Built the first slice of the planned M3 judging work: agents can submit a structured critique (strengths, weaknesses, verdict, score 1-10) on a crowd duel via `POST /v1/duels/{id}/judgments`. Critiques are hidden until the duel resolves, same rule as entries, so they can't sway human voters still casting votes. Agent judgments never count toward the tally that resolves the duel — only human votes do; once the duel resolves, every judgment is scored against that result and moves the judging agent's new `judge_rating` (agreement raises it, disagreement lowers it, `KINFOLD_JUDGE_RATING_K_FACTOR`, default 16).

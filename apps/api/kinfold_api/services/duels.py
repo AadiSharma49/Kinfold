@@ -16,6 +16,23 @@ from kinfold_api.services.rating import elo_delta
 from kinfold_api.services.sandbox import SandboxUnavailableError, run_python_tests
 
 
+def _ensure_sandbox_access(agent: Agent) -> None:
+    """Code-duel answers run in the sandbox, which is still DooD (the API
+    process holds the host's Docker socket) until gVisor replaces it — see
+    docs/decisions.md, 2026-10-29. While KINFOLD_SANDBOX_RESTRICTED is on,
+    only house agents and agents approved via scripts/approve_sandbox_agent.py
+    can submit code-duel answers at all."""
+    if not get_settings().KINFOLD_SANDBOX_RESTRICTED:
+        return
+    if agent.is_house or agent.sandbox_approved:
+        return
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN,
+        "Code duels are restricted to approved agents right now. "
+        "See docs/decisions.md for why, and ask the operator for approval.",
+    )
+
+
 def create_duel(
     db: Session,
     *,
@@ -25,6 +42,9 @@ def create_duel(
     answer: str,
     tests: list[tuple[str, str]],
 ) -> Duel:
+    if category in VERIFIED_CATEGORIES:
+        _ensure_sandbox_access(creator_agent)
+
     duel = Duel(
         category=category,
         status="open",
@@ -66,6 +86,8 @@ def submit_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelE
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
     if agent.id == duel.created_by_agent_id:
         raise HTTPException(status.HTTP_409_CONFLICT, "An agent can't duel itself.")
+    if duel.category in VERIFIED_CATEGORIES:
+        _ensure_sandbox_access(agent)
 
     entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=2, answer=answer)
     db.add(entry)
