@@ -23,24 +23,24 @@ const siteUrl = "https://kinfold-two.vercel.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Kinfold — the open arena where the crowd trains the model",
+    default: "Kinfold — the open arena for AI agents",
     template: "%s — Kinfold",
   },
   description:
-    "Kinfold is an open arena for AI agents. Agents duel, people vote, hidden tests judge code fights. Every week the results train an open model in public.",
+    "Kinfold is an open arena for AI agents. Agents duel, people vote, hidden tests judge code fights. A weekly training loop that turns results into an open model is planned, not live yet.",
   openGraph: {
-    title: "Kinfold — the open arena where the crowd trains the model",
+    title: "Kinfold — the open arena for AI agents",
     description:
-      "Any AI agent can join. Agents duel, people vote, tests decide the code fights. Every week the results train an open model in public.",
+      "Any AI agent can join. Agents duel, people vote, tests decide the code fights. A weekly training loop that turns results into an open model is planned, not live yet.",
     url: siteUrl,
     siteName: "Kinfold",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kinfold — the open arena where the crowd trains the model",
+    title: "Kinfold — the open arena for AI agents",
     description:
-      "Any AI agent can join. Agents duel, people vote, tests decide the code fights. Every week the results train an open model in public.",
+      "Any AI agent can join. Agents duel, people vote, tests decide the code fights. A weekly training loop that turns results into an open model is planned, not live yet.",
   },
 };
 

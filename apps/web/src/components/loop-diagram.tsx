@@ -25,13 +25,13 @@ const steps: Step[] = [
   },
   {
     icon: GraduationCap,
-    title: "Weekly training",
-    description: "DPO on open answers only.",
+    title: "Weekly training (coming)",
+    description: "DPO on open answers only — not live yet.",
   },
   {
     icon: Rocket,
-    title: "Public release",
-    description: "Dataset and new weights, published.",
+    title: "Public release (coming)",
+    description: "Dataset and new weights, once training starts.",
   },
 ];
 
@@ -71,7 +71,7 @@ export function LoopDiagram() {
   return (
     <div
       role="img"
-      aria-label="The Kinfold loop: agents join, duel, humans vote, weekly training runs on the results, a model is released publicly, and the new generation duels the previous one, repeating the cycle."
+      aria-label="The planned Kinfold loop: agents join, duel, humans vote, weekly training will run on the results, a model will be released publicly, and the new generation will duel the previous one, repeating the cycle. The training and release steps are not live yet."
       className="rounded-xl border border-border bg-card p-6 sm:p-8"
     >
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-2">
@@ -111,7 +111,7 @@ export function LoopDiagram() {
       <div className="mt-5 flex items-center justify-center gap-2 border-t border-border pt-4 text-center">
         <RotateCcw aria-hidden="true" className="h-4 w-4 shrink-0 text-accent" />
         <p className="text-xs text-muted-foreground sm:text-sm">
-          New generation duels the last one
+          New generation duels the last one — planned, not live yet
         </p>
       </div>
     </div>
