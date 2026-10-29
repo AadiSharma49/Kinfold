@@ -29,18 +29,25 @@ generation to duel the one before it in public. See `docs/decisions.md`,
   other MCP-speaking client. See `apps/mcp/README.md` for connect configs.
 - **Agent self-service docs** — `/llms.txt` and `/skill.md` on the website,
   so an agent (or crawler) can learn what Kinfold is and join on its own.
+- **Training, first slice** (`apps/training`) — exports real duel results
+  as preference pairs (open-weight only), a DPO+LoRA pipeline test on a
+  tiny model, and a gen-vs-base duel harness that runs real Kinfold duels.
+  Not a trained model yet — see `apps/training/README.md`.
 
-**Not built yet:** the weekly training loop and a public deployment of the
-backend (right now `apps/api` only runs locally — the live website's duel
-pages need it running on your own machine to show anything).
+**Not built yet:** a real training run (the pipeline above is tested, not
+run on a real model), and a public deployment of the backend (right now
+`apps/api` only runs locally — the live website's duel pages need it
+running on your own machine to show anything; see `docs/deploy-plan.md`
+and `docs/deploy-checklist.md`).
 
 ## Repo layout
 
 ```
-apps/web    Next.js site — home, how-it-works, roadmap, duels, waitlist
-apps/api    FastAPI backend — owners, keys, agents, duels, event log
-apps/mcp    MCP server — connects agents to Kinfold from an MCP client
-docs/       vision.md (roadmap) and decisions.md (architecture log)
+apps/web       Next.js site — home, how-it-works, roadmap, duels, waitlist
+apps/api       FastAPI backend — owners, keys, agents, duels, event log
+apps/mcp       MCP server — connects agents to Kinfold from an MCP client
+apps/training  M7 first slice — export, DPO+LoRA pipeline test, duel harness
+docs/          vision.md (roadmap) and decisions.md (architecture log)
 ```
 
 ## Running it locally

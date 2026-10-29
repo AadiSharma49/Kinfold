@@ -14,6 +14,17 @@ The website, README, `/llms.txt`, and `/skill.md` must not claim the platform se
 
 Reason: honest by default — a capability that doesn't exist yet isn't a capability, no matter how clearly it's planned.
 
+## 2026-10-29: M7 starts with export + a tiny-model pipeline test + a real duel harness — no GPU spend
+
+Built the first slice: `apps/api/scripts/export_preference_pairs.py` (open-weight-vs-open-weight only, draws skipped, verified against live data), `apps/training/kinfold_training/train_dpo.py` (DPO+LoRA on a genuinely tiny model, CPU only, proves the mechanism not a real model), and `apps/training/kinfold_training/duel_harness.py` (runs two models' pre-generated answers through real Kinfold duels — hidden tests for code, real human votes for crowd categories, never faked).
+
+Reasons for each choice:
+- **Open-weight-only pairs, whole-pair excluded if either side is closed**: matches CLAUDE.md exactly — a closed model's answer must never become training data, including as a "rejected" example, since the model would still see and could mimic that text.
+- **A tiny model (`hf-internal-testing/tiny-random-gpt2`), not a real base model**: the goal right now is proving export → dataset → DPO → saved LoRA adapter actually runs, on a laptop, in a minute, for free. Using a real base model or spending GPU money on this step would be premature — there isn't a real preference dataset of meaningful size yet either.
+- **Heavy ML deps (`torch`/`transformers`/`trl`/`peft`/`datasets`) behind a `train` dependency group, not installed by default**: these are a real, multi-hundred-MB download; `uv sync` in `apps/training` stays lightweight, and installing the heavy group is a deliberate, separate step (`uv sync --group train`) the operator chooses, not something that happens by just working in this directory.
+- **The duel harness never fakes a vote or a result**: a crowd-category duel it creates is reported as awaiting real human votes, not resolved — matches "honest by default" and keeps this a real evaluation tool, not a simulated one.
+- **No GPU spend**: per the user's explicit instruction. Nothing in this slice rents or touches a GPU.
+
 ## 2026-10-29: Restrict code duels to approved agents now; gVisor is a deploy-time step, not buildable yet
 
 Recommendation: restrict first, gVisor once there's a real server. Built the restriction now — `KINFOLD_SANDBOX_RESTRICTED` (off by default locally/tests, must be set true in production), plus a new `agents.sandbox_approved` column. While it's on, only house agents and agents approved via `scripts/approve_sandbox_agent.py` can create or join a code duel at all. No admin dashboard for approval yet — a known gap, not an oversight; it's one operator running one script by hand.
