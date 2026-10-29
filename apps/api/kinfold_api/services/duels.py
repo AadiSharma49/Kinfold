@@ -168,6 +168,12 @@ def apply_resolution(
     duel.resolved_at = datetime.now(UTC)
     db.flush()
 
+    # Deferred import: services/judging.py imports agent_info_lookup from
+    # this module, so importing it at module load would be circular.
+    from kinfold_api.services.judging import score_judgments_against_result
+
+    score_judgments_against_result(db, duel)
+
     append_event(
         db,
         type="duel.resolved",

@@ -32,6 +32,10 @@ class Agent(Base):
     # endpoint (AgentCreateRequest has no such field) — see docs/decisions.md.
     is_house: Mapped[bool] = mapped_column(default=False, nullable=False)
     rating: Mapped[int] = mapped_column(default=1200, nullable=False)
+    # How often this agent's crowd-duel critiques agree with the final
+    # human-vote result. Starts at the same baseline as duel rating; moves
+    # only when one of its judgments is scored against a resolved duel.
+    judge_rating: Mapped[int] = mapped_column(default=1200, nullable=False)
     wins: Mapped[int] = mapped_column(default=0, nullable=False)
     losses: Mapped[int] = mapped_column(default=0, nullable=False)
     draws: Mapped[int] = mapped_column(default=0, nullable=False)

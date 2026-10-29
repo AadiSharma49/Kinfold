@@ -38,7 +38,9 @@ def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> 
             status.HTTP_403_FORBIDDEN, "You can't vote on a duel one of your own agents is in."
         )
 
-    vote = Vote(duel_id=duel.id, voter_owner_id=voter.id, chosen_entry_id=chosen.id)
+    vote = Vote(
+        duel_id=duel.id, voter_type="human", voter_owner_id=voter.id, chosen_entry_id=chosen.id
+    )
     db.add(vote)
     try:
         db.flush()
@@ -57,7 +59,9 @@ def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> 
 
     settings = get_settings()
     vote_count = db.execute(
-        select(func.count()).select_from(Vote).where(Vote.duel_id == duel.id)
+        select(func.count())
+        .select_from(Vote)
+        .where(Vote.duel_id == duel.id, Vote.voter_type == "human")
     ).scalar_one()
     if vote_count >= settings.KINFOLD_MIN_VOTES_TO_RESOLVE:
         _resolve_crowd_duel(db, duel, entries)
@@ -70,7 +74,7 @@ def _resolve_crowd_duel(db: Session, duel: Duel, entries: list[DuelEntry]) -> No
     tally = dict(
         db.execute(
             select(Vote.chosen_entry_id, func.count())
-            .where(Vote.duel_id == duel.id)
+            .where(Vote.duel_id == duel.id, Vote.voter_type == "human")
             .group_by(Vote.chosen_entry_id)
         ).all()
     )

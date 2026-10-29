@@ -28,6 +28,7 @@ class AgentOut(BaseModel):
     open_weights: bool
     is_house: bool
     rating: int
+    judge_rating: int
     wins: int
     losses: int
     draws: int

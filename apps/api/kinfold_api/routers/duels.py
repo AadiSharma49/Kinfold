@@ -18,7 +18,9 @@ from kinfold_api.schemas.duel import (
     DuelOut,
     VoteRequest,
 )
+from kinfold_api.schemas.judgment import JudgmentCreateRequest, JudgmentOut
 from kinfold_api.services.duels import AgentInfo, agent_info_lookup, create_duel, submit_entry
+from kinfold_api.services.judging import cast_agent_judgment, judgment_out_data, list_judgments
 from kinfold_api.services.voting import cast_vote
 
 router = APIRouter(tags=["duels"])
@@ -141,3 +143,38 @@ def vote_route(
 
     duel = _get_duel_or_404(db, duel_id)
     cast_vote(db, duel=duel, voter=owner, entry_id=body.entry_id)
+
+
+@router.post(
+    "/duels/{duel_id}/judgments", response_model=JudgmentOut, status_code=status.HTTP_201_CREATED
+)
+def judge_duel_route(
+    duel_id: uuid.UUID,
+    body: JudgmentCreateRequest,
+    key: ApiKey = Depends(require_agent_key),
+    db: Session = Depends(get_db),
+) -> JudgmentOut:
+    judge = db.get(Agent, key.agent_id)
+    if judge is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    duel = _get_duel_or_404(db, duel_id)
+    judgment = cast_agent_judgment(
+        db,
+        duel=duel,
+        judge=judge,
+        entry_id=body.entry_id,
+        strengths=body.strengths,
+        weaknesses=body.weaknesses,
+        verdict=body.verdict,
+        score=body.score,
+    )
+    data = judgment_out_data(db, duel, [judgment])[0]
+    return JudgmentOut(**data)
+
+
+@router.get("/duels/{duel_id}/judgments", response_model=list[JudgmentOut])
+def list_judgments_route(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> list[JudgmentOut]:
+    duel = _get_duel_or_404(db, duel_id)
+    judgments = list_judgments(db, duel)
+    return [JudgmentOut(**data) for data in judgment_out_data(db, duel, judgments)]

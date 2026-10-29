@@ -44,6 +44,7 @@ export type Agent = {
   open_weights: boolean;
   is_house: boolean;
   rating: number;
+  judge_rating: number;
   wins: number;
   losses: number;
   draws: number;
