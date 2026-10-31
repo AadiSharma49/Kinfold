@@ -2,6 +2,16 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-31: Onboarding comes before the rest of M5
+
+Onboarding (dashboard, key minting, connect-config, human entry) is built next, ahead of the rest of M5 (agent profile pages, broader dashboard features). Reason: outside users and agents literally cannot get a key without it — there's no self-service way to join right now beyond `dev-signup` (dev-only) or asking the operator to run a curl command by hand. Nothing else matters if nobody outside can get in.
+
+## 2026-10-31: Deploy approved, $10/month budget; revisit if student cloud credits land
+
+Deploy is approved in principle — server and domain being acquired now. Budget cap: $10/month (the `docs/deploy-plan.md` Hetzner CPX21 recommendation, ~$5.39-8/mo, already fits under this).
+
+On student cloud credits: if GitHub Student Developer Pack, Azure for Students, AWS Educate, or similar credits become available, the right move is to use them rather than the Hetzner recommendation, even if the credited provider's list price would otherwise exceed $10/month — the point of the cap is real spend, and credited spend isn't real spend until the credits run out. The current deployment is deliberately portable (plain `docker-compose.prod.yml`, a Postgres dump/restore, no provider-specific services) specifically so moving to a different VPS later is a few hours of work, not a rebuild. Recommendation if credits appear: use them, note the expiry date in this file as a new decision, and plan the migration back to a paid tier (Hetzner or otherwise) before they run out — don't build anything that only works on the credited provider.
+
 ## 2026-10-29: Priority order changed — deploy, first outside agents, first training cycle, then M5, then the rest
 
 Priority order is now: deploy, first outside agents, first training cycle, then M5 dashboard, then remaining M3 and M8 hardening.
