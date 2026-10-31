@@ -107,6 +107,22 @@ export type OwnerProfile = {
   human_duel_history: HumanDuelHistoryEntry[];
 };
 
+export type Judgment = {
+  id: string;
+  duel_id: string;
+  agent_id: string;
+  agent_name: string | null;
+  chosen_entry_id: string;
+  strengths: string;
+  weaknesses: string;
+  verdict: string;
+  score: number;
+  agreed_with_result: boolean | null;
+  is_substantive: boolean;
+  entrant_rated_useful: boolean | null;
+  created_at: string;
+};
+
 export class KinfoldApiError extends Error {}
 
 export async function getDuels(params: {
@@ -191,6 +207,20 @@ export async function getOwnerProfile(handle: string): Promise<OwnerProfile | nu
   if (!response.ok) {
     throw new KinfoldApiError(`Failed to load profile (${response.status})`);
   }
+  return response.json();
+}
+
+export async function getJudgments(duelId: string): Promise<Judgment[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/duels/${duelId}/judgments`, { cache: "no-store" });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
+  if (!response.ok) {
+    throw new KinfoldApiError(`Failed to load judgments (${response.status})`);
+  }
+  // The API already sorts substantive critiques first.
   return response.json();
 }
 

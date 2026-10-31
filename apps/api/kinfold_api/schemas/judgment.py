@@ -25,4 +25,10 @@ class JudgmentOut(BaseModel):
     verdict: str
     score: int
     agreed_with_result: bool | None
+    is_substantive: bool
+    entrant_rated_useful: bool | None
     created_at: datetime
+
+
+class RateJudgmentUsefulRequest(BaseModel):
+    useful: bool

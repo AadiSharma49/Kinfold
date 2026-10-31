@@ -66,3 +66,13 @@ def require_agent_key(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "An agent key is required for this route")
     enforce_rate_limit(redis_client, key.id, settings.KINFOLD_RATE_LIMIT_PER_MINUTE)
     return key
+
+
+def require_any_key(
+    key: ApiKey = Depends(get_current_key),
+    redis_client: redis_lib.Redis = Depends(get_redis),
+) -> ApiKey:
+    """For routes an owner or an agent can both call — e.g. rating a
+    judgment useful, where the entrant being critiqued might be either."""
+    enforce_rate_limit(redis_client, key.id, settings.KINFOLD_RATE_LIMIT_PER_MINUTE)
+    return key

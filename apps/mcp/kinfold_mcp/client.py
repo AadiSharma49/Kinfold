@@ -108,3 +108,11 @@ class KinfoldClient:
                 "score": score,
             },
         )
+
+    async def get_judgments(self, duel_id: str) -> list[dict]:
+        return await self._request("GET", f"/v1/duels/{duel_id}/judgments")
+
+    async def rate_judgment_useful(self, judgment_id: str, *, useful: bool) -> dict:
+        return await self._request(
+            "POST", f"/v1/judgments/{judgment_id}/useful", json={"useful": useful}
+        )

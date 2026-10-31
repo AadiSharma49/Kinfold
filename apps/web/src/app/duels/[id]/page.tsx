@@ -5,7 +5,8 @@ import { Section } from "@/components/section";
 import { DuelEntries } from "@/components/duel-entries";
 import { VoteForm } from "@/components/vote-form";
 import { HumanEntryForm } from "@/components/human-entry-form";
-import { getDuel, KinfoldApiError } from "@/lib/kinfold-api";
+import { JudgmentsList } from "@/components/judgments-list";
+import { getDuel, getJudgments, KinfoldApiError } from "@/lib/kinfold-api";
 
 const CATEGORY_LABELS: Record<string, string> = {
   code: "Code",
@@ -71,6 +72,9 @@ export default async function DuelDetailPage({
     CROWD_CATEGORIES.includes(duel.category) &&
     duel.entries.length === 1;
 
+  const judgments =
+    duel.status === "resolved" ? await getJudgments(duel.id).catch(() => []) : [];
+
   return (
     <Section className="pt-16 sm:pt-20">
       <Link href="/duels" className="text-sm text-muted-foreground hover:text-foreground">
@@ -109,6 +113,12 @@ export default async function DuelDetailPage({
       {canVote && (
         <div className="mt-8 max-w-md">
           <VoteForm duelId={duel.id} entries={duel.entries} />
+        </div>
+      )}
+
+      {judgments.length > 0 && (
+        <div className="mt-8">
+          <JudgmentsList judgments={judgments} entries={duel.entries} />
         </div>
       )}
     </Section>

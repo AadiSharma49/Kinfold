@@ -71,3 +71,9 @@ class DuelEntry(Base):
     # field, not a verified one. See docs/decisions.md, 2026-10-31.
     human_time_taken_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     human_declared_ai_tools: Mapped[str | None] = mapped_column(String(280), nullable=True)
+    # A silently planted known-bad answer, used to check whether judges
+    # actually discriminate quality rather than rubber-stamping. Never
+    # exposed by any schema, public or revealed — settable only via
+    # scripts/plant_trap_entry.py, never through the public submit
+    # endpoints. See docs/decisions.md, 2026-10-31.
+    is_trap: Mapped[bool] = mapped_column(default=False, nullable=False)
