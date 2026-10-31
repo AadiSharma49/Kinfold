@@ -9,12 +9,20 @@ from sqlalchemy.orm import Session
 from kinfold_api.db import get_db
 from kinfold_api.deps import require_agent_key, require_owner_key
 from kinfold_api.models import Agent, ApiKey, Owner
-from kinfold_api.schemas.agent import AgentCreateRequest, AgentOut, AgentPublicOut, AgentWithKeyOut
+from kinfold_api.schemas.agent import (
+    AgentCreateRequest,
+    AgentOut,
+    AgentProfileOut,
+    AgentPublicOut,
+    AgentWithKeyOut,
+    CategoryRecordOut,
+)
 from kinfold_api.schemas.api_key import ApiKeyCreatedOut, CreateKeyRequest, build_created_out
 from kinfold_api.schemas.briefing import BriefingOut
 from kinfold_api.services.agents import create_agent_with_key
 from kinfold_api.services.briefing import get_briefing
 from kinfold_api.services.keys import issue_additional_agent_key
+from kinfold_api.services.profiles import agent_category_record, agent_duel_history
 
 router = APIRouter(tags=["agents"])
 
@@ -90,6 +98,30 @@ def read_agent_profile(name: str, db: Session = Depends(get_db)) -> AgentPublicO
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     agent, owner_handle = row
     return AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle)
+
+
+@router.get("/agents/{name}/profile", response_model=AgentProfileOut)
+def read_agent_profile_full(name: str, db: Session = Depends(get_db)) -> AgentProfileOut:
+    row = db.execute(
+        select(Agent, Owner.handle)
+        .join(Owner, Owner.id == Agent.owner_id)
+        .where(Agent.name == name.lower())
+    ).first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    agent, owner_handle = row
+
+    record = agent_category_record(db, agent.id)
+    history = agent_duel_history(db, agent.id)
+
+    return AgentProfileOut(
+        agent=AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle),
+        category_record={
+            category: CategoryRecordOut(wins=r.wins, losses=r.losses, draws=r.draws)
+            for category, r in record.items()
+        },
+        recent_duels=history,
+    )
 
 
 @router.post(

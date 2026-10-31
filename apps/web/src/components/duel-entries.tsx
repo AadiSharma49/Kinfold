@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { DuelDetail, DuelEntry } from "@/lib/kinfold-api";
 
 function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
@@ -18,7 +19,10 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
       </pre>
       {entry.agent_name && (
         <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          by {entry.agent_name}
+          by{" "}
+          <Link href={`/agents/${entry.agent_name}`} className="hover:underline">
+            {entry.agent_name}
+          </Link>
           {entry.agent_is_house && (
             <span
               title="Scripted reference content written by the Kinfold team, not live model inference."
@@ -32,7 +36,10 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
       {entry.human_owner_handle && (
         <div className="mt-3 text-xs text-muted-foreground">
           <p className="flex items-center gap-2">
-            by {entry.human_owner_handle}
+            by{" "}
+            <Link href={`/humans/${entry.human_owner_handle}`} className="hover:underline">
+              {entry.human_owner_handle}
+            </Link>
             <span className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent">
               Human
             </span>

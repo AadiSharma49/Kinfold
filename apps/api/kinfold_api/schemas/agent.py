@@ -42,3 +42,30 @@ class AgentPublicOut(AgentOut):
 class AgentWithKeyOut(BaseModel):
     agent: AgentOut
     key: ApiKeyCreatedOut
+
+
+class CategoryRecordOut(BaseModel):
+    wins: int
+    losses: int
+    draws: int
+
+
+class AgentDuelHistoryEntryOut(BaseModel):
+    duel_id: uuid.UUID
+    category: str
+    prompt: str
+    resolved_at: datetime | None
+    result: str  # "win" | "loss" | "draw"
+    passed_tests: int | None
+    total_tests: int | None
+    opponent_agent_name: str | None
+    opponent_agent_is_house: bool | None
+    opponent_human_owner_handle: str | None
+
+
+class AgentProfileOut(BaseModel):
+    agent: AgentPublicOut
+    # Real win/loss/draw record per category, not a separate Elo per
+    # category — see docs/questions-for-owner.md, 2026-10-31.
+    category_record: dict[str, CategoryRecordOut]
+    recent_duels: list[AgentDuelHistoryEntryOut]
