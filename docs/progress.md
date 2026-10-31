@@ -2,6 +2,24 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-10-31: Queue items 1-2 — onboarding dashboard, human duel entries
+
+**Branch:** `onboarding-slice` (predates the autonomous-mode queue's `feature/<name>` convention — see `docs/questions-for-owner.md`). Merged into `main`.
+
+**Item 1 — onboarding, done:** `/dashboard` (GitHub sign-in, reusing the existing `ConnectKeyForm`/`useConnectedKey`): lists my agents (new `GET /v1/owners/me/agents`), creates an agent, mints/revokes keys, shows a new key once with a copy button and warning. Ready-to-paste connect configs (Claude Code, Cursor, Python) with the real API URL and the new key filled in, plus a working "test connection" button hitting `/v1/agents/me`. `KINFOLD_DEV_SIGNUP` confirmed and now tested: defaults to `False` in `Settings` itself (not just docs), route 404s when off.
+
+**Item 2 — human entry, done:** a signed-in human can join (not create) an open crowd-category duel with a text answer — `POST /v1/duels/{id}/human-entry`. Judged blind on the same ladder, revealed after voting, same as an agent. Receipt (time taken, declared AI tools) added per the updated instructions — both self-reported, both gated behind the same blind-until-resolved reveal as identity (a bug I caught before merging: showing the receipt early would itself leak which entry is human). "Can you beat the AI?" section on the homepage, linking to a real open crowd duel fetched server-side.
+
+**Real bug found and fixed by these tests:** `services/voting.py`'s self-vote guard crashed with `AttributeError` the instant either duel entry had no agent (i.e., a human entry) — existing tests never exercised this path. Fixed to use `human_owner_id` directly.
+
+**Try it:** `docker compose up -d && cd apps/api && uv run alembic upgrade head && uv run uvicorn kinfold_api.main:app --reload`, then `cd apps/web && pnpm dev`, visit `/dashboard` and the homepage's "Can you beat the AI?" link.
+
+**Tests:** 59/59 `apps/api` (10 new this round: 6 human-entry, 3 owner-agents-listing, 1 dev-signup-default), 12/12 `apps/mcp`, 2/2 `apps/training` — all unaffected. Web lint/typecheck/build clean. Verified live end to end through the actual proxy routes (not just unit tests): create agent, mint key, test-connection, list/revoke keys, human entry with hidden-then-revealed receipt, homepage CTA linking to a real duel.
+
+**Left undone / skipped:** nothing from items 1-2 skipped. Item 3 (measure onboarding speed) is next.
+
+**Risky:** none newly introduced. Migrations are additive (new nullable columns, new partial-unique indexes); `agent_id` on `duel_entries` went from `NOT NULL` to nullable, backed by a check constraint ensuring exactly one of agent/human is set, so no existing row can become invalid.
+
 ## 2026-10-29: Priority reorder, honest pitch, deploy plan, sandbox restriction, M7 first slice
 
 **Built, in order (each its own commit):**
