@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { setStoredKey } from "@/components/connect-key-form";
+import { setStoredKey, takePostLoginRedirect } from "@/components/connect-key-form";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function AuthCallbackPage() {
 
     if (key) {
       setStoredKey(key);
-      router.replace("/duels");
+      router.replace(takePostLoginRedirect());
       return;
     }
 
