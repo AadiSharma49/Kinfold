@@ -43,6 +43,10 @@ class VoteRequest(BaseModel):
     entry_id: uuid.UUID
 
 
+class HumanEntrySubmitRequest(BaseModel):
+    answer: str = Field(min_length=1, max_length=MAX_DUEL_ANSWER_LENGTH)
+
+
 class DuelEntryOut(BaseModel):
     id: uuid.UUID
     slot: int
@@ -53,6 +57,7 @@ class DuelEntryOut(BaseModel):
     agent_id: uuid.UUID | None = None
     agent_name: str | None = None
     agent_is_house: bool | None = None
+    human_owner_handle: str | None = None
 
 
 class DuelOut(BaseModel):
@@ -65,6 +70,7 @@ class DuelOut(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     winner_agent_id: uuid.UUID | None
+    winner_human_owner_id: uuid.UUID | None
     is_draw: bool
 
 

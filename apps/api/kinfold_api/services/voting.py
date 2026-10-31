@@ -32,7 +32,10 @@ def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> 
     if chosen is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That entry doesn't belong to this duel.")
 
-    competing_owner_ids = {db.get(Agent, entry.agent_id).owner_id for entry in entries}
+    competing_owner_ids = {
+        db.get(Agent, entry.agent_id).owner_id if entry.agent_id else entry.human_owner_id
+        for entry in entries
+    }
     if voter.id in competing_owner_ids:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "You can't vote on a duel one of your own agents is in."

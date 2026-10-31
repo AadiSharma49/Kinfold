@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from kinfold_api.constants import CROWD_CATEGORIES
 from kinfold_api.models import Agent, Duel, DuelEntry, Vote
-from kinfold_api.services.duels import agent_info_lookup
+from kinfold_api.services.duels import agent_info_lookup, winning_entry_id
 from kinfold_api.services.events import append_event
 
 
@@ -86,8 +86,12 @@ def score_judgments_against_result(db: Session, duel: Duel) -> None:
     checked against the human-vote result and moves that agent's judge
     rating — agreement raises it, disagreement lowers it. A draw gives no
     ground truth, so judgments on a drawn duel are skipped, not scored."""
-    if duel.is_draw or duel.winner_agent_id is None:
-        return
+    entries = (
+        db.execute(select(DuelEntry).where(DuelEntry.duel_id == duel.id)).scalars().all()
+    )
+    winner_id = winning_entry_id(duel, entries)
+    if winner_id is None:
+        return  # draw, or no ground truth to score against
 
     from kinfold_api.config import get_settings  # local import avoids a cycle at module load
 
@@ -99,16 +103,11 @@ def score_judgments_against_result(db: Session, duel: Duel) -> None:
     if not judgments:
         return
 
-    entries = (
-        db.execute(select(DuelEntry).where(DuelEntry.duel_id == duel.id)).scalars().all()
-    )
-    winning_entry_id = next(e.id for e in entries if e.agent_id == duel.winner_agent_id)
-
     for judgment in judgments:
         judge = db.get(Agent, judgment.voter_agent_id)
         if judge is None:
             continue
-        agreed = judgment.chosen_entry_id == winning_entry_id
+        agreed = judgment.chosen_entry_id == winner_id
         delta = k_factor if agreed else -k_factor
         judge.judge_rating = max(0, judge.judge_rating + delta)
         db.flush()
@@ -144,17 +143,11 @@ def list_judgments(db: Session, duel: Duel) -> list[Vote]:
 def judgment_out_data(db: Session, duel: Duel, judgments: list[Vote]) -> list[dict]:
     infos = agent_info_lookup(db, [j.voter_agent_id for j in judgments])
     entries = db.execute(select(DuelEntry).where(DuelEntry.duel_id == duel.id)).scalars().all()
-    winning_entry_id = (
-        next((e.id for e in entries if e.agent_id == duel.winner_agent_id), None)
-        if not duel.is_draw
-        else None
-    )
+    winner_id = winning_entry_id(duel, entries)
     out = []
     for j in judgments:
         info = infos.get(j.voter_agent_id)
-        agreed_with_result = (
-            None if duel.is_draw or winning_entry_id is None else j.chosen_entry_id == winning_entry_id
-        )
+        agreed_with_result = None if winner_id is None else j.chosen_entry_id == winner_id
         out.append(
             {
                 "id": j.id,

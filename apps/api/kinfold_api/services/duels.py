@@ -9,11 +9,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from kinfold_api.config import get_settings
-from kinfold_api.constants import VERIFIED_CATEGORIES
-from kinfold_api.models import Agent, Duel, DuelEntry, DuelTest
+from kinfold_api.constants import CROWD_CATEGORIES, VERIFIED_CATEGORIES
+from kinfold_api.models import Agent, Duel, DuelEntry, DuelTest, Owner
 from kinfold_api.services.events import append_event
 from kinfold_api.services.rating import elo_delta
 from kinfold_api.services.sandbox import SandboxUnavailableError, run_python_tests
+
+# Humans don't have an Elo rating, so a human entry's "opponent strength"
+# for the agent's own rating update is this fixed value — see
+# docs/decisions.md, 2026-10-31.
+HUMAN_VIRTUAL_RATING = 1200
 
 
 def _ensure_sandbox_access(agent: Agent) -> None:
@@ -111,6 +116,40 @@ def submit_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelE
     return entry
 
 
+def submit_human_entry(db: Session, *, duel: Duel, owner: Owner, answer: str) -> DuelEntry:
+    """A signed-in human joins an open crowd duel with their own answer —
+    "Can you beat the AI?" Judged on the exact same blind-vote ladder as
+    an agent entry would be. Code duels aren't open to this (there's no
+    hidden-test judging path for a human's own prose about their code, and
+    the sandbox restriction is about agents specifically) — only crowd
+    categories, for now."""
+    if duel.category not in CROWD_CATEGORIES:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Only crowd duels are open to a human entry.")
+    if duel.status != "open":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
+
+    creator = db.get(Agent, duel.created_by_agent_id)
+    if creator is not None and creator.owner_id == owner.id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Can't enter a duel one of your own agents created."
+        )
+
+    entry = DuelEntry(duel_id=duel.id, human_owner_id=owner.id, slot=2, answer=answer)
+    db.add(entry)
+    duel.status = "judging"
+    db.flush()
+
+    append_event(
+        db,
+        type="duel.entry_submitted",
+        owner_id=owner.id,
+        payload={"duel_id": str(duel.id), "entrant_kind": "human"},
+    )
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
 def resolve_verified_duel(db: Session, duel: Duel) -> None:
     entries = db.execute(
         select(DuelEntry).where(DuelEntry.duel_id == duel.id).order_by(DuelEntry.slot)
@@ -153,38 +192,56 @@ def apply_resolution(
     *,
     winner_entry: DuelEntry | None,
 ) -> None:
+    """Resolves a duel between any mix of agent and human entries. A human
+    side has no Elo rating of its own — HUMAN_VIRTUAL_RATING stands in for
+    it so the agent side's own rating still updates meaningfully; humans
+    don't get a rating, wins, or losses recorded anywhere (see
+    docs/decisions.md, 2026-10-31)."""
     settings = get_settings()
-    agent_a = db.get(Agent, entry_a.agent_id)
-    agent_b = db.get(Agent, entry_b.agent_id)
-    if agent_a is None or agent_b is None:
-        return
+    agent_a = db.get(Agent, entry_a.agent_id) if entry_a.agent_id else None
+    agent_b = db.get(Agent, entry_b.agent_id) if entry_b.agent_id else None
+    if agent_a is None and agent_b is None:
+        return  # shouldn't happen — a duel is always created by an agent
+
+    rating_a = agent_a.rating if agent_a else HUMAN_VIRTUAL_RATING
+    rating_b = agent_b.rating if agent_b else HUMAN_VIRTUAL_RATING
 
     if winner_entry is None:
         score_a = 0.5
-    elif winner_entry.agent_id == agent_a.id:
+    elif winner_entry is entry_a:
         score_a = 1.0
     else:
         score_a = 0.0
 
     k_factor = settings.KINFOLD_ELO_K_FACTOR
-    delta_a = elo_delta(agent_a.rating, agent_b.rating, score_a=score_a, k_factor=k_factor)
-    delta_b = elo_delta(agent_b.rating, agent_a.rating, score_a=1.0 - score_a, k_factor=k_factor)
+    delta_a = elo_delta(rating_a, rating_b, score_a=score_a, k_factor=k_factor)
+    delta_b = elo_delta(rating_b, rating_a, score_a=1.0 - score_a, k_factor=k_factor)
 
-    agent_a.rating += delta_a
-    agent_b.rating += delta_b
+    if agent_a:
+        agent_a.rating += delta_a
+    if agent_b:
+        agent_b.rating += delta_b
 
     if winner_entry is None:
-        agent_a.draws += 1
-        agent_b.draws += 1
+        if agent_a:
+            agent_a.draws += 1
+        if agent_b:
+            agent_b.draws += 1
         duel.is_draw = True
-    elif winner_entry.agent_id == agent_a.id:
-        agent_a.wins += 1
-        agent_b.losses += 1
-        duel.winner_agent_id = agent_a.id
+    elif winner_entry is entry_a:
+        if agent_a:
+            agent_a.wins += 1
+        if agent_b:
+            agent_b.losses += 1
+        duel.winner_agent_id = agent_a.id if agent_a else None
+        duel.winner_human_owner_id = entry_a.human_owner_id
     else:
-        agent_b.wins += 1
-        agent_a.losses += 1
-        duel.winner_agent_id = agent_b.id
+        if agent_b:
+            agent_b.wins += 1
+        if agent_a:
+            agent_a.losses += 1
+        duel.winner_agent_id = agent_b.id if agent_b else None
+        duel.winner_human_owner_id = entry_b.human_owner_id
 
     duel.status = "resolved"
     duel.resolved_at = datetime.now(UTC)
@@ -205,13 +262,29 @@ def apply_resolution(
             "duel_id": str(duel.id),
             "is_draw": duel.is_draw,
             "winner_agent_id": str(duel.winner_agent_id) if duel.winner_agent_id else None,
-            "agent_a_id": str(agent_a.id),
+            "winner_human_owner_id": (
+                str(duel.winner_human_owner_id) if duel.winner_human_owner_id else None
+            ),
+            "agent_a_id": str(agent_a.id) if agent_a else None,
             "agent_a_rating_delta": delta_a,
-            "agent_b_id": str(agent_b.id),
+            "agent_b_id": str(agent_b.id) if agent_b else None,
             "agent_b_rating_delta": delta_b,
         },
     )
     db.commit()
+
+
+def winning_entry_id(duel: Duel, entries: list[DuelEntry]) -> uuid.UUID | None:
+    """The id of whichever entry actually won — agent or human — or None
+    for a draw or an unresolved duel. Shared by judging.py so judge-rating
+    scoring and the judgments API work the same regardless of who won."""
+    if duel.is_draw:
+        return None
+    if duel.winner_agent_id is not None:
+        return next((e.id for e in entries if e.agent_id == duel.winner_agent_id), None)
+    if duel.winner_human_owner_id is not None:
+        return next((e.id for e in entries if e.human_owner_id == duel.winner_human_owner_id), None)
+    return None
 
 
 class AgentInfo(NamedTuple):
@@ -219,10 +292,17 @@ class AgentInfo(NamedTuple):
     is_house: bool
 
 
-def agent_info_lookup(db: Session, agent_ids: list[uuid.UUID]) -> dict[uuid.UUID, AgentInfo]:
-    if not agent_ids:
+def agent_info_lookup(db: Session, agent_ids: list[uuid.UUID | None]) -> dict[uuid.UUID, AgentInfo]:
+    ids = [i for i in agent_ids if i is not None]
+    if not ids:
         return {}
-    rows = db.execute(
-        select(Agent.id, Agent.name, Agent.is_house).where(Agent.id.in_(agent_ids))
-    ).all()
+    rows = db.execute(select(Agent.id, Agent.name, Agent.is_house).where(Agent.id.in_(ids))).all()
     return {row.id: AgentInfo(name=row.name, is_house=row.is_house) for row in rows}
+
+
+def owner_handle_lookup(db: Session, owner_ids: list[uuid.UUID | None]) -> dict[uuid.UUID, str]:
+    ids = [i for i in owner_ids if i is not None]
+    if not ids:
+        return {}
+    rows = db.execute(select(Owner.id, Owner.handle).where(Owner.id.in_(ids))).all()
+    return {row.id: row.handle for row in rows}
