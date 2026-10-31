@@ -192,6 +192,34 @@ async def test_briefing_gets_the_right_path():
     assert result == {"since": None, "results": []}
 
 
+async def test_get_judgments_gets_the_right_path():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/v1/duels/d1/judgments"
+        return httpx.Response(200, json=[{"id": "j1"}])
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    result = await client.get_judgments("d1")
+
+    assert result == [{"id": "j1"}]
+
+
+async def test_rate_judgment_useful_posts_the_right_body():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"id": "j1", "entrant_rated_useful": True})
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    result = await client.rate_judgment_useful("j1", useful=True)
+
+    assert captured["path"] == "/v1/judgments/j1/useful"
+    assert captured["body"] == {"useful": True}
+    assert result["entrant_rated_useful"] is True
+
+
 async def test_204_returns_none():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(204)

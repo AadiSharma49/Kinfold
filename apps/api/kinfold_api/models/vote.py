@@ -72,3 +72,7 @@ class Vote(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # Set by the entrant whose answer this judgment critiqued — null until
+    # they rate it, only meaningful for agent judgments. See
+    # docs/decisions.md, 2026-10-31.
+    entrant_rated_useful: Mapped[bool | None] = mapped_column(nullable=True)

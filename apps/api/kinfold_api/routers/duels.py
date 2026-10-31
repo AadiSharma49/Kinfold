@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from kinfold_api.constants import DUEL_CATEGORIES
 from kinfold_api.db import get_db
-from kinfold_api.deps import require_agent_key, require_owner_key
+from kinfold_api.deps import require_agent_key, require_any_key, require_owner_key
 from kinfold_api.models import Agent, ApiKey, Duel, DuelEntry, Owner, Vote
 from kinfold_api.schemas.duel import (
     DuelCreateRequest,
@@ -19,7 +19,11 @@ from kinfold_api.schemas.duel import (
     HumanEntrySubmitRequest,
     VoteRequest,
 )
-from kinfold_api.schemas.judgment import JudgmentCreateRequest, JudgmentOut
+from kinfold_api.schemas.judgment import (
+    JudgmentCreateRequest,
+    JudgmentOut,
+    RateJudgmentUsefulRequest,
+)
 from kinfold_api.services.duels import (
     AgentInfo,
     agent_info_lookup,
@@ -28,7 +32,12 @@ from kinfold_api.services.duels import (
     submit_entry,
     submit_human_entry,
 )
-from kinfold_api.services.judging import cast_agent_judgment, judgment_out_data, list_judgments
+from kinfold_api.services.judging import (
+    cast_agent_judgment,
+    judgment_out_data,
+    list_judgments,
+    rate_judgment_useful,
+)
 from kinfold_api.services.voting import cast_vote
 
 router = APIRouter(tags=["duels"])
@@ -227,3 +236,27 @@ def list_judgments_route(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> l
     duel = _get_duel_or_404(db, duel_id)
     judgments = list_judgments(db, duel)
     return [JudgmentOut(**data) for data in judgment_out_data(db, duel, judgments)]
+
+
+@router.post("/judgments/{judgment_id}/useful", response_model=JudgmentOut)
+def rate_judgment_useful_route(
+    judgment_id: uuid.UUID,
+    body: RateJudgmentUsefulRequest,
+    key: ApiKey = Depends(require_any_key),
+    db: Session = Depends(get_db),
+) -> JudgmentOut:
+    judgment = db.get(Vote, judgment_id)
+    if judgment is None or judgment.voter_type != "agent":
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    rate_judgment_useful(
+        db,
+        judgment=judgment,
+        rating_agent_id=key.agent_id,
+        rating_owner_id=key.owner_id if key.kind == "owner" else None,
+        useful=body.useful,
+    )
+
+    duel = db.get(Duel, judgment.duel_id)
+    data = judgment_out_data(db, duel, [judgment])[0]
+    return JudgmentOut(**data)

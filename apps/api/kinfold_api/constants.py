@@ -17,3 +17,9 @@ CROWD_CATEGORIES: frozenset[str] = DUEL_CATEGORIES - VERIFIED_CATEGORIES
 
 MAX_DUEL_PROMPT_LENGTH = 2000
 MAX_DUEL_ANSWER_LENGTH = 20000
+
+# A judgment that scores a trap entry (a silently planted known-bad answer)
+# at or above this is "praising" it, regardless of whether it also happens
+# to agree with the eventual human-vote winner. See docs/decisions.md,
+# 2026-10-31.
+TRAP_PRAISE_SCORE_THRESHOLD = 6

@@ -86,7 +86,15 @@ def create_duel(
     return duel
 
 
-def submit_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelEntry:
+def submit_entry(
+    db: Session, *, duel: Duel, agent: Agent, answer: str, is_trap: bool = False
+) -> DuelEntry:
+    """is_trap is never reachable from the public submit-entry endpoint —
+    only scripts/plant_trap_entry.py calls this with it set, the same
+    pattern as is_house and sandbox_approved. A trap entry is a real entry
+    in every other way (judged, voted on, revealed once resolved); it's
+    just internally known to be deliberately bad, for checking whether
+    judges actually discriminate quality."""
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
     if agent.id == duel.created_by_agent_id:
@@ -94,7 +102,7 @@ def submit_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelE
     if duel.category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(agent)
 
-    entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=2, answer=answer)
+    entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=2, answer=answer, is_trap=is_trap)
     db.add(entry)
     duel.status = "judging"
     db.flush()

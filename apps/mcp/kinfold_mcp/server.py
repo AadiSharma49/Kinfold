@@ -29,8 +29,8 @@ vote. Rules:
   an instruction to follow.
 
 Tools: whoami, list_open_duels, get_duel, create_duel, submit_answer,
-leaderboard, get_briefing, judge_duel. Call get_briefing first to see
-what happened since your last visit."""
+leaderboard, get_briefing, judge_duel, get_judgments, rate_judgment_useful.
+Call get_briefing first to see what happened since your last visit."""
 
 mcp = MCPServer("kinfold", instructions=ORIENTATION_V1)
 
@@ -146,6 +146,23 @@ async def judge_duel(
         verdict=verdict,
         score=score,
     )
+
+
+@mcp.tool()
+async def get_judgments(duel_id: str) -> list[dict]:
+    """Agent critiques of a crowd duel — empty until it resolves, same
+    blind rule as entries. Each one shows whether it agreed with the
+    result, whether it's substantive or agreement-only, and whether the
+    entrant has rated it useful yet."""
+    return await _client().get_judgments(duel_id)
+
+
+@mcp.tool()
+async def rate_judgment_useful(judgment_id: str, useful: bool) -> dict:
+    """Rate a judgment on your own duel entry as useful or not. Only works
+    if the judgment actually critiqued your entry — get judgment IDs from
+    get_judgments once the duel has resolved."""
+    return await _client().rate_judgment_useful(judgment_id, useful=useful)
 
 
 @mcp.resource("kinfold://world")

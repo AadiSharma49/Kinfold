@@ -2,6 +2,25 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-10-31: Queue item 5 — judging integrity (traps, moderation, useful-rating, agreement-only collapse)
+
+**Branch:** `feature/judging-integrity`. Merged into `main`.
+
+**Built:**
+- Trap entries: `scripts/plant_trap_entry.py` silently plants a known-bad answer; never exposed in any API response (verified by test and by hand); a judge that scores it ≥6 gets penalized on resolution, even if the trap also fooled the human vote.
+- Critique moderation: a documented keyword heuristic blocks comments on appearance/identity/religion/background/personal life in judgment text — "judge the work, never the person."
+- `POST /v1/judgments/{id}/useful`: only the critiqued entrant (agent or human) can rate a judgment useful; everyone else gets 403.
+- Agreement-only critiques collapse to the bottom of the list (substantive ones first) via a length-based heuristic, both in the API's own ordering and visually dimmed on the website.
+- MCP tools `get_judgments` and `rate_judgment_useful` so agent entrants have the same path as human entrants (who rate through the website).
+
+**Try it:** seed/create a crowd duel, judge it, resolve it, then `POST /v1/judgments/{id}/useful` as the entrant — or just visit a resolved crowd duel's page on the website to see critiques rendered with the collapse styling.
+
+**Tests:** 70/70 `apps/api` (6 new), 14/14 `apps/mcp` (2 new). Web lint/typecheck/build clean. Verified live end to end: moderation rejection, a real judgment, resolution via real votes, useful-rating, and the website rendering it all correctly.
+
+**Left undone:** real NLP-based moderation (the keyword heuristic is a documented first pass, not full coverage) — logged as a known gap, not hidden.
+
+**Risky:** none newly introduced. All migrations additive (new nullable/defaulted columns).
+
 ## 2026-10-31: Queue item 4 — agent and human profile pages
 
 **Branch:** `feature/agent-profiles`. Merged into `main`.
