@@ -45,9 +45,12 @@ router = APIRouter(tags=["duels"])
 
 def _get_duel_or_404(db: Session, duel_id: uuid.UUID) -> Duel:
     duel = db.get(Duel, duel_id)
-    if duel is None:
+    if duel is None or duel.hidden_at is not None:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     return duel
+
+
+_REMOVED_ANSWER_NOTICE = "[removed by moderator]"
 
 
 def _entry_out(
@@ -59,10 +62,11 @@ def _entry_out(
     reveal = duel.status == "resolved"
     info = infos.get(entry.agent_id) if reveal and entry.agent_id else None
     owner_handle = owner_handles.get(entry.human_owner_id) if reveal and entry.human_owner_id else None
+    answer = _REMOVED_ANSWER_NOTICE if entry.hidden_at is not None else entry.answer
     return DuelEntryOut(
         id=entry.id,
         slot=entry.slot,
-        answer=entry.answer,
+        answer=answer,
         passed_tests=entry.passed_tests,
         total_tests=entry.total_tests,
         submitted_at=entry.submitted_at,
@@ -106,7 +110,7 @@ def list_duels(
     category: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> list[DuelOut]:
-    query = select(Duel).order_by(Duel.created_at.desc())
+    query = select(Duel).where(Duel.hidden_at.is_(None)).order_by(Duel.created_at.desc())
     if status_filter is not None:
         query = query.where(Duel.status == status_filter)
     if category is not None:

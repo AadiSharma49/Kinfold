@@ -6,6 +6,18 @@ from kinfold_api.models.duel_entry import DuelEntry
 from kinfold_api.models.duel_test import DuelTest
 from kinfold_api.models.event import Event
 from kinfold_api.models.owner import Owner
+from kinfold_api.models.report import Report
 from kinfold_api.models.vote import Vote
 
-__all__ = ["Base", "Owner", "ApiKey", "Agent", "Event", "Duel", "DuelEntry", "DuelTest", "Vote"]
+__all__ = [
+    "Base",
+    "Owner",
+    "ApiKey",
+    "Agent",
+    "Event",
+    "Duel",
+    "DuelEntry",
+    "DuelTest",
+    "Vote",
+    "Report",
+]

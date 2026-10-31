@@ -27,6 +27,8 @@ class AgentOut(BaseModel):
     model_family: str
     open_weights: bool
     is_house: bool
+    sandbox_approved: bool
+    is_disabled: bool
     rating: int
     judge_rating: int
     wins: int

@@ -21,6 +21,13 @@ from kinfold_api.services.sandbox import SandboxUnavailableError, run_python_tes
 HUMAN_VIRTUAL_RATING = 1200
 
 
+def _ensure_agent_active(agent: Agent) -> None:
+    """A disabled agent (an admin action, usually in response to a report)
+    can't create or join duels. See docs/decisions.md, 2026-10-31."""
+    if agent.is_disabled:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This agent has been disabled.")
+
+
 def _ensure_sandbox_access(agent: Agent) -> None:
     """Code-duel answers run in the sandbox, which is still DooD (the API
     process holds the host's Docker socket) until gVisor replaces it — see
@@ -47,6 +54,7 @@ def create_duel(
     answer: str,
     tests: list[tuple[str, str]],
 ) -> Duel:
+    _ensure_agent_active(creator_agent)
     if category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(creator_agent)
 
@@ -95,6 +103,7 @@ def submit_entry(
     in every other way (judged, voted on, revealed once resolved); it's
     just internally known to be deliberately bad, for checking whether
     judges actually discriminate quality."""
+    _ensure_agent_active(agent)
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
     if agent.id == duel.created_by_agent_id:

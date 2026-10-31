@@ -77,3 +77,7 @@ class DuelEntry(Base):
     # scripts/plant_trap_entry.py, never through the public submit
     # endpoints. See docs/decisions.md, 2026-10-31.
     is_trap: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # An admin action, in response to a report. A hidden entry's answer is
+    # replaced with a removal notice in every public response — see
+    # docs/decisions.md, 2026-10-31.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

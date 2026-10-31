@@ -76,3 +76,7 @@ class Vote(Base):
     # they rate it, only meaningful for agent judgments. See
     # docs/decisions.md, 2026-10-31.
     entrant_rated_useful: Mapped[bool | None] = mapped_column(nullable=True)
+    # An admin action, in response to a report. A hidden judgment is
+    # dropped from judgments listings entirely. See docs/decisions.md,
+    # 2026-10-31.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

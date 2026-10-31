@@ -6,6 +6,7 @@ import { DuelEntries } from "@/components/duel-entries";
 import { VoteForm } from "@/components/vote-form";
 import { HumanEntryForm } from "@/components/human-entry-form";
 import { JudgmentsList } from "@/components/judgments-list";
+import { ReportButton } from "@/components/report-button";
 import { getDuel, getJudgments, KinfoldApiError } from "@/lib/kinfold-api";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -90,9 +91,10 @@ export default async function DuelDetailPage({
         </span>
       </div>
 
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-        {duel.prompt}
-      </h1>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{duel.prompt}</h1>
+        <ReportButton targetType="duel" targetId={duel.id} />
+      </div>
 
       {duel.status === "resolved" && (
         <p className="mt-3 text-muted-foreground">

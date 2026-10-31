@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportButton } from "@/components/report-button";
 import type { DuelDetail, DuelEntry } from "@/lib/kinfold-api";
 
 function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
@@ -8,11 +9,14 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
         <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
-        {entry.total_tests !== null && (
-          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-            {entry.passed_tests}/{entry.total_tests} tests passed
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {entry.total_tests !== null && (
+            <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              {entry.passed_tests}/{entry.total_tests} tests passed
+            </span>
+          )}
+          <ReportButton targetType="entry" targetId={entry.id} />
+        </div>
       </div>
       <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm">
         {entry.answer}
