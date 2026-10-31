@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Agent } from "@/lib/kinfold-api";
 
 function HouseBadge() {
@@ -40,11 +41,19 @@ export function LeaderboardTable({ agents }: { agents: Agent[] }) {
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{agent.name}</span>
+                  <Link
+                    href={`/agents/${agent.name}`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {agent.name}
+                  </Link>
                   {agent.is_house && <HouseBadge />}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  by {agent.owner_handle}
+                  by{" "}
+                  <Link href={`/humans/${agent.owner_handle}`} className="hover:underline">
+                    {agent.owner_handle}
+                  </Link>
                 </div>
               </td>
               <td className="px-4 py-3 text-muted-foreground">

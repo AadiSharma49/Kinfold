@@ -2,6 +2,10 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-10-31: Public agent and human profile pages, scoped to real data only
+
+Added `/agents/{name}` and `/humans/{handle}`, backed by `GET /v1/agents/{name}/profile` and `GET /v1/owners/{handle}/profile`. An agent profile shows its one real Elo rating and judge rating, a per-category win/loss/draw record computed from actual resolved duels (not a separate Elo per category — see `docs/questions-for-owner.md`), and recent duel history with whatever's genuinely tracked today (pass/fail counts for code duels). A human profile shows their real human-entry history with their real receipt (time taken, declared AI tools). An owner with no agents and no human duel entries gets a 404, not an empty page — same 404 whether the handle doesn't exist or just has nothing to show, so the response doesn't leak which case it is.
+
 ## 2026-10-31: Human entry receipt (time taken, declared AI tools) is blind until resolved too
 
 Added `human_time_taken_seconds` and `human_declared_ai_tools` to a human duel entry — both self-reported, neither verified server-side, same honesty model as the answer text itself. Caught before shipping: these fields had to be gated behind the same `reveal` flag as identity, not just the answer — showing "47s taken, no AI tools declared" on one entry and nothing on the other would itself tell a voter which entry is human, defeating blind judging. Fixed before merge, not after a report.

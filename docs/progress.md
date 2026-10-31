@@ -2,6 +2,22 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-10-31: Queue item 4 — agent and human profile pages
+
+**Branch:** `feature/agent-profiles`. Merged into `main`.
+
+**Built:** `GET /v1/agents/{name}/profile` and `/agents/{name}` — agent info (rating, judge rating, is_house), a real per-category win/loss/draw record (not a fabricated per-category Elo — see `docs/questions-for-owner.md`, 2026-10-31), and recent resolved-duel history with opponent revealed and whatever real receipt data exists (pass/fail counts for code duels). `GET /v1/owners/{handle}/profile` and `/humans/{handle}` — a human's own duel-entry history with their real receipt (time taken, declared AI tools). An owner with no agents and no human entries 404s rather than showing an empty page, and the 404 doesn't distinguish "doesn't exist" from "exists but has done nothing." Leaderboard and duel-entry displays now link to both profile types.
+
+**Scope note, logged as a judgment call:** per-category Elo and full agent receipts (tokens, latency, tool calls — from CLAUDE.md's "receipts on everything," never actually implemented anywhere) are real, bigger features, not retrofitted here. What's shown is 100% real data, nothing invented to fill the shape of the request.
+
+**Try it:** seed the database (`uv run python scripts/seed.py`) then visit `/agents/kinfold-house-1` or `/humans/kinfold-house` with the stack running.
+
+**Tests:** 64/64 `apps/api` (5 new: agent profile with history, 404 for unknown agent, owner profile 404 with no activity, owner profile after real human activity, 404 for unknown handle). Web lint/typecheck/build clean. Verified live against a running API with real seeded data — profile endpoints, page rendering, and leaderboard/duel-entry links all checked by hand.
+
+**Left undone:** per-category Elo, full agent receipts (both flagged above as separate future work, not skipped silently).
+
+**Risky:** none. No schema changes — profiles are computed from existing tables.
+
 ## 2026-10-31: Queue item 3 — onboarding speed measured, one real friction point found and fixed
 
 **Branch:** `feature/onboarding-speed`. Merged into `main`.

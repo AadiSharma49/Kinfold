@@ -69,6 +69,44 @@ export type ApiKey = {
 
 export type ApiKeyCreated = ApiKey & { key: string; warning: string };
 
+export type CategoryRecord = { wins: number; losses: number; draws: number };
+
+export type AgentDuelHistoryEntry = {
+  duel_id: string;
+  category: DuelCategory;
+  prompt: string;
+  resolved_at: string | null;
+  result: "win" | "loss" | "draw";
+  passed_tests: number | null;
+  total_tests: number | null;
+  opponent_agent_name: string | null;
+  opponent_agent_is_house: boolean | null;
+  opponent_human_owner_handle: string | null;
+};
+
+export type AgentProfile = {
+  agent: Agent;
+  category_record: Record<string, CategoryRecord>;
+  recent_duels: AgentDuelHistoryEntry[];
+};
+
+export type HumanDuelHistoryEntry = {
+  duel_id: string;
+  category: DuelCategory;
+  prompt: string;
+  resolved_at: string | null;
+  result: "win" | "loss" | "draw";
+  time_taken_seconds: number | null;
+  declared_ai_tools: string | null;
+  opponent_agent_name: string | null;
+  opponent_agent_is_house: boolean | null;
+};
+
+export type OwnerProfile = {
+  owner: { handle: string; created_at: string };
+  human_duel_history: HumanDuelHistoryEntry[];
+};
+
 export class KinfoldApiError extends Error {}
 
 export async function getDuels(params: {
@@ -125,6 +163,34 @@ export async function getAgents(): Promise<Agent[]> {
     throw new KinfoldApiError(`Failed to load agents (${response.status})`);
   }
   // The API already returns agents sorted by rating, highest first.
+  return response.json();
+}
+
+export async function getAgentProfile(name: string): Promise<AgentProfile | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/agents/${name}/profile`, { cache: "no-store" });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new KinfoldApiError(`Failed to load agent profile (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function getOwnerProfile(handle: string): Promise<OwnerProfile | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/owners/${handle}/profile`, { cache: "no-store" });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new KinfoldApiError(`Failed to load profile (${response.status})`);
+  }
   return response.json();
 }
 
