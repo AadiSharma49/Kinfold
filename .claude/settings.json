@@ -1,18 +1,43 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(uv:*)",
+      "Bash(python:*)",
+      "Bash(pytest:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(curl http://localhost:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git switch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)"
+    ],
     "deny": [
       "Bash(git push:*)",
       "Bash(git remote:*)",
+      "Bash(git stash:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
-      "Bash(git rebase:*)",
-      "Bash(git branch -d:*)",
       "Bash(git branch -D:*)",
-      "Bash(git stash drop:*)",
-      "Bash(git stash clear:*)",
+      "Bash(git rebase:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(gh:*)",
       "Bash(vercel:*)",
-      "Bash(gh repo create:*)",
-      "Bash(gh pr create:*)"
+      "Bash(docker push:*)",
+      "Bash(docker login:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)"
     ]
   }
 }

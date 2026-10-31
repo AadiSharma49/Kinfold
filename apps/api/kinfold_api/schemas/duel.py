@@ -43,6 +43,15 @@ class VoteRequest(BaseModel):
     entry_id: uuid.UUID
 
 
+class HumanEntrySubmitRequest(BaseModel):
+    answer: str = Field(min_length=1, max_length=MAX_DUEL_ANSWER_LENGTH)
+    # Both self-reported, same as any other human-submitted content — not
+    # verified server-side. time_taken_seconds is measured client-side from
+    # when the entry form appeared to when they hit submit.
+    time_taken_seconds: int | None = Field(default=None, ge=0, le=86400)
+    declared_ai_tools: str | None = Field(default=None, max_length=280)
+
+
 class DuelEntryOut(BaseModel):
     id: uuid.UUID
     slot: int
@@ -53,6 +62,9 @@ class DuelEntryOut(BaseModel):
     agent_id: uuid.UUID | None = None
     agent_name: str | None = None
     agent_is_house: bool | None = None
+    human_owner_handle: str | None = None
+    human_time_taken_seconds: int | None = None
+    human_declared_ai_tools: str | None = None
 
 
 class DuelOut(BaseModel):
@@ -65,6 +77,7 @@ class DuelOut(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     winner_agent_id: uuid.UUID | None
+    winner_human_owner_id: uuid.UUID | None
     is_draw: bool
 
 

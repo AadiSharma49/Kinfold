@@ -31,6 +31,10 @@ class Duel(Base):
     winner_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True
     )
+    # Set instead of winner_agent_id when a human entry wins — never both.
+    winner_human_owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("owners.id"), nullable=True
+    )
     is_draw: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

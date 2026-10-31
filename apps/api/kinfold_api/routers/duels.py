@@ -16,10 +16,18 @@ from kinfold_api.schemas.duel import (
     DuelEntryOut,
     DuelEntrySubmitRequest,
     DuelOut,
+    HumanEntrySubmitRequest,
     VoteRequest,
 )
 from kinfold_api.schemas.judgment import JudgmentCreateRequest, JudgmentOut
-from kinfold_api.services.duels import AgentInfo, agent_info_lookup, create_duel, submit_entry
+from kinfold_api.services.duels import (
+    AgentInfo,
+    agent_info_lookup,
+    create_duel,
+    owner_handle_lookup,
+    submit_entry,
+    submit_human_entry,
+)
 from kinfold_api.services.judging import cast_agent_judgment, judgment_out_data, list_judgments
 from kinfold_api.services.voting import cast_vote
 
@@ -33,9 +41,15 @@ def _get_duel_or_404(db: Session, duel_id: uuid.UUID) -> Duel:
     return duel
 
 
-def _entry_out(entry: DuelEntry, duel: Duel, infos: dict[uuid.UUID, AgentInfo]) -> DuelEntryOut:
+def _entry_out(
+    entry: DuelEntry,
+    duel: Duel,
+    infos: dict[uuid.UUID, AgentInfo],
+    owner_handles: dict[uuid.UUID, str],
+) -> DuelEntryOut:
     reveal = duel.status == "resolved"
-    info = infos.get(entry.agent_id) if reveal else None
+    info = infos.get(entry.agent_id) if reveal and entry.agent_id else None
+    owner_handle = owner_handles.get(entry.human_owner_id) if reveal and entry.human_owner_id else None
     return DuelEntryOut(
         id=entry.id,
         slot=entry.slot,
@@ -46,6 +60,12 @@ def _entry_out(entry: DuelEntry, duel: Duel, infos: dict[uuid.UUID, AgentInfo]) 
         agent_id=entry.agent_id if reveal else None,
         agent_name=info.name if info else None,
         agent_is_house=info.is_house if info else None,
+        human_owner_handle=owner_handle,
+        # Gated behind `reveal`, same as identity: a time-taken or declared
+        # tools value present pre-resolution would itself leak which entry
+        # is the human one, defeating blind judging.
+        human_time_taken_seconds=entry.human_time_taken_seconds if reveal else None,
+        human_declared_ai_tools=entry.human_declared_ai_tools if reveal else None,
     )
 
 
@@ -99,7 +119,9 @@ def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut
         .scalars()
         .all()
     )
-    infos = agent_info_lookup(db, [e.agent_id for e in entries]) if duel.status == "resolved" else {}
+    reveal = duel.status == "resolved"
+    infos = agent_info_lookup(db, [e.agent_id for e in entries]) if reveal else {}
+    owner_handles = owner_handle_lookup(db, [e.human_owner_id for e in entries]) if reveal else {}
 
     votes_cast = db.execute(
         select(func.count()).select_from(Vote).where(Vote.duel_id == duel.id)
@@ -107,7 +129,7 @@ def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut
 
     return DuelDetailOut(
         **DuelOut.model_validate(duel).model_dump(),
-        entries=[_entry_out(e, duel, infos) for e in entries],
+        entries=[_entry_out(e, duel, infos, owner_handles) for e in entries],
         votes_cast=votes_cast,
     )
 
@@ -127,7 +149,34 @@ def submit_entry_route(
     entry = submit_entry(db, duel=duel, agent=agent, answer=body.answer)
     db.refresh(duel)
     infos = agent_info_lookup(db, [entry.agent_id]) if duel.status == "resolved" else {}
-    return _entry_out(entry, duel, infos)
+    return _entry_out(entry, duel, infos, {})
+
+
+@router.post(
+    "/duels/{duel_id}/human-entry", response_model=DuelEntryOut, status_code=status.HTTP_201_CREATED
+)
+def submit_human_entry_route(
+    duel_id: uuid.UUID,
+    body: HumanEntrySubmitRequest,
+    key: ApiKey = Depends(require_owner_key),
+    db: Session = Depends(get_db),
+) -> DuelEntryOut:
+    owner = db.get(Owner, key.owner_id)
+    if owner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    duel = _get_duel_or_404(db, duel_id)
+    entry = submit_human_entry(
+        db,
+        duel=duel,
+        owner=owner,
+        answer=body.answer,
+        time_taken_seconds=body.time_taken_seconds,
+        declared_ai_tools=body.declared_ai_tools,
+    )
+    db.refresh(duel)
+    owner_handles = owner_handle_lookup(db, [entry.human_owner_id]) if duel.status == "resolved" else {}
+    return _entry_out(entry, duel, {}, owner_handles)
 
 
 @router.post("/duels/{duel_id}/vote", status_code=status.HTTP_204_NO_CONTENT)

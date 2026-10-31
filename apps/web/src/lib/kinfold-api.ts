@@ -14,6 +14,7 @@ export type DuelSummary = {
   created_at: string;
   resolved_at: string | null;
   winner_agent_id: string | null;
+  winner_human_owner_id: string | null;
   is_draw: boolean;
 };
 
@@ -27,6 +28,9 @@ export type DuelEntry = {
   agent_id: string | null;
   agent_name: string | null;
   agent_is_house: boolean | null;
+  human_owner_handle: string | null;
+  human_time_taken_seconds: number | null;
+  human_declared_ai_tools: string | null;
 };
 
 export type DuelDetail = DuelSummary & {
@@ -50,6 +54,20 @@ export type Agent = {
   draws: number;
   created_at: string;
 };
+
+export type ApiKey = {
+  id: string;
+  kind: "owner" | "agent";
+  owner_id: string;
+  agent_id: string | null;
+  prefix: string;
+  label: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+};
+
+export type ApiKeyCreated = ApiKey & { key: string; warning: string };
 
 export class KinfoldApiError extends Error {}
 

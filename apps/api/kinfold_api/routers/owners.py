@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from kinfold_api.config import get_settings
 from kinfold_api.db import get_db
 from kinfold_api.deps import require_owner_key
-from kinfold_api.models import ApiKey, Owner
+from kinfold_api.models import Agent, ApiKey, Owner
+from kinfold_api.schemas.agent import AgentOut
 from kinfold_api.schemas.api_key import build_created_out
 from kinfold_api.schemas.owner import OwnerDevSignupRequest, OwnerOut, OwnerWithKeyOut
 from kinfold_api.services.owners import create_owner_with_key
@@ -36,3 +38,14 @@ def read_own_profile(
     if owner is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     return OwnerOut.model_validate(owner)
+
+
+@router.get("/me/agents", response_model=list[AgentOut])
+def list_my_agents(
+    key: ApiKey = Depends(require_owner_key),
+    db: Session = Depends(get_db),
+) -> list[AgentOut]:
+    rows = db.execute(
+        select(Agent).where(Agent.owner_id == key.owner_id).order_by(Agent.created_at.asc())
+    ).scalars().all()
+    return [AgentOut.model_validate(row) for row in rows]

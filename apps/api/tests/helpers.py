@@ -74,3 +74,11 @@ def submit_entry(client: TestClient, agent_key: str, duel_id: str, answer: str):
         json={"answer": answer},
         headers={"Authorization": f"Bearer {agent_key}"},
     )
+
+
+def submit_human_entry(client: TestClient, owner_key: str, duel_id: str, answer: str):
+    return client.post(
+        f"/v1/duels/{duel_id}/human-entry",
+        json={"answer": answer},
+        headers={"Authorization": f"Bearer {owner_key}"},
+    )
