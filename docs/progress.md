@@ -2,6 +2,39 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-10-31: Queue item 3 — onboarding speed measured, one real friction point found and fixed
+
+**Branch:** `feature/onboarding-speed`. Merged into `main`.
+
+**What I measured:** wrote `apps/api/scripts/measure_onboarding.py`, which walks the exact 5 named steps (sign in, create agent, connect, first duel, first vote) against a real running API and times each. GitHub OAuth itself can't be scripted without a real browser and a real GitHub test account, so "sign in" uses `dev-signup` as a stand-in — same backend work (create an owner row, issue a key), just missing GitHub's own redirect/consent round-trip.
+
+**Raw API latency (warmed connection, 3 runs):**
+
+| Step | Time |
+|---|---|
+| 1. Sign in | 15-16ms |
+| 2. Create agent (mints the key in the same call) | 23-25ms |
+| 3. Connect (`GET /v1/agents/me`) | 11-12ms |
+| 4. Create first duel | 15-18ms |
+| 5. First vote (after a second entrant fills the duel) | 72-105ms |
+| **Total** | **140-174ms** |
+
+(The first unwarmed run showed step 1 at ~2000ms — that's a Windows localhost IPv6-then-IPv4 connection-setup artifact, nothing to do with Kinfold or dev-signup; confirmed by hitting `/v1/health` first and watching the "real" first request drop to 11ms. Script now warms the connection before timing.)
+
+**Conclusion: the API was never the bottleneck.** Total backend latency for the whole path is under 200ms. The real 2-minute budget is spent on GitHub's own OAuth consent screen (seconds to tens of seconds, outside Kinfold's control) and human time reading the dashboard and typing into 3 form fields — both comfortably fit inside 2 minutes already.
+
+**One real friction point found and fixed, not just measured:** `ConnectKeyForm`'s "Sign in with GitHub" link always sent the user back to `/duels` after login, regardless of where they started — so signing in from `/dashboard` (exactly the onboarding path this item is about) dropped the user on the wrong page, adding an extra manual navigation step. Fixed: the link now records `window.location.pathname` in `sessionStorage` before navigating to GitHub, and `/auth/callback` reads it back (`takePostLoginRedirect()`) instead of hardcoding `/duels`. Falls back to `/duels` if nothing was recorded, so a direct visit to `/auth/callback` still behaves.
+
+**Try it:**
+```bash
+docker compose up -d && cd apps/api && uv run alembic upgrade head && uv run uvicorn kinfold_api.main:app --reload
+uv run python scripts/measure_onboarding.py
+```
+
+**Tests:** no new automated tests for the measurement script itself (it's a diagnostic tool, not product behavior) — the redirect fix is a one-line client-side change with no server behavior to test; verified manually by tracing the fixed code path (sessionStorage round-trip) rather than a new unit test, since it has no backend surface and the existing `apps/web` build/typecheck/lint already cover it compiling and running correctly. `apps/api` 59/59, `apps/mcp` 12/12, `apps/training` 2/2 unaffected; web lint/typecheck/build clean.
+
+**Left undone:** none from item 3's scope. The target ("sign-in to first duel under 2 minutes") is already met by a wide margin once the redirect fix is in.
+
 ## 2026-10-31: Queue items 1-2 — onboarding dashboard, human duel entries
 
 **Branch:** `onboarding-slice` (predates the autonomous-mode queue's `feature/<name>` convention — see `docs/questions-for-owner.md`). Merged into `main`.

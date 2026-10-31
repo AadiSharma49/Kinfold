@@ -3,11 +3,22 @@
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "kinfold_owner_key";
+const POST_LOGIN_REDIRECT_KEY = "kinfold_post_login_redirect";
 const API_BASE = process.env.NEXT_PUBLIC_KINFOLD_API_URL ?? "http://localhost:8000";
 
 /** Used by /auth/callback after a GitHub login redirect delivers a key. */
 export function setStoredKey(rawKey: string) {
   localStorage.setItem(STORAGE_KEY, rawKey);
+}
+
+/** Used by /auth/callback to send the user back where they started
+ * signing in — e.g. /dashboard, not always /duels. Defaults to /duels if
+ * nothing was recorded (a direct visit to /auth/callback shouldn't happen,
+ * but fails safe rather than crashing). */
+export function takePostLoginRedirect(): string {
+  const target = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY) ?? "/duels";
+  sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+  return target;
 }
 
 export function useConnectedKey() {
@@ -67,6 +78,12 @@ export function ConnectKeyForm({
     <div className="flex flex-col gap-2">
       <a
         href={`${API_BASE}/v1/auth/github/login`}
+        onClick={() => {
+          // Remembered here, read back by /auth/callback — otherwise
+          // signing in from anywhere but the duels page dumps you back on
+          // /duels instead of where you actually started.
+          sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, window.location.pathname);
+        }}
         className="rounded-md border border-border px-4 py-2 text-center text-sm font-medium transition-colors hover:bg-muted"
       >
         Sign in with GitHub
