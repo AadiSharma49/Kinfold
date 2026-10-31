@@ -61,6 +61,11 @@ def _entry_out(
         agent_name=info.name if info else None,
         agent_is_house=info.is_house if info else None,
         human_owner_handle=owner_handle,
+        # Gated behind `reveal`, same as identity: a time-taken or declared
+        # tools value present pre-resolution would itself leak which entry
+        # is the human one, defeating blind judging.
+        human_time_taken_seconds=entry.human_time_taken_seconds if reveal else None,
+        human_declared_ai_tools=entry.human_declared_ai_tools if reveal else None,
     )
 
 
@@ -161,7 +166,14 @@ def submit_human_entry_route(
         raise HTTPException(status.HTTP_404_NOT_FOUND)
 
     duel = _get_duel_or_404(db, duel_id)
-    entry = submit_human_entry(db, duel=duel, owner=owner, answer=body.answer)
+    entry = submit_human_entry(
+        db,
+        duel=duel,
+        owner=owner,
+        answer=body.answer,
+        time_taken_seconds=body.time_taken_seconds,
+        declared_ai_tools=body.declared_ai_tools,
+    )
     db.refresh(duel)
     owner_handles = owner_handle_lookup(db, [entry.human_owner_id]) if duel.status == "resolved" else {}
     return _entry_out(entry, duel, {}, owner_handles)

@@ -100,3 +100,45 @@ def test_human_win_updates_duel_and_agent_rating_without_crashing(client):
     agent_profile = client.get(f"/v1/agents/{agent_a['name']}").json()
     assert agent_profile["losses"] == 1
     assert agent_profile["rating"] < agent_a["rating"]
+
+
+def test_human_receipt_is_blind_until_resolved_then_revealed(client):
+    _, owner_a_key = signup_owner(client, "owner_human_receipt_a")
+    _, owner_b_key = signup_owner(client, "owner_human_receipt_b")
+    _, agent_a_key = create_agent(client, owner_a_key, "human_receipt_agent_a")
+
+    duel = create_duel(client, agent_a_key, category="debate", answer="AI's answer")
+    submit_response = client.post(
+        f"/v1/duels/{duel['id']}/human-entry",
+        json={
+            "answer": "Human's answer",
+            "time_taken_seconds": 95,
+            "declared_ai_tools": "Used a spell-checker, nothing else.",
+        },
+        headers={"Authorization": f"Bearer {owner_b_key}"},
+    )
+    assert submit_response.status_code == 201, submit_response.text
+    entry = submit_response.json()
+    # Hidden on the submitter's own response too — same blind rule, no
+    # special-casing for "it's my own entry."
+    assert entry["human_time_taken_seconds"] is None
+    assert entry["human_declared_ai_tools"] is None
+
+    blind_detail = client.get(f"/v1/duels/{duel['id']}").json()
+    human_entry_blind = next(e for e in blind_detail["entries"] if e["id"] == entry["id"])
+    assert human_entry_blind["human_time_taken_seconds"] is None
+    assert human_entry_blind["human_declared_ai_tools"] is None
+
+    min_votes = get_settings().KINFOLD_MIN_VOTES_TO_RESOLVE
+    for i in range(min_votes):
+        _, voter_key = signup_owner(client, f"owner_human_receipt_voter_{i}")
+        client.post(
+            f"/v1/duels/{duel['id']}/vote",
+            json={"entry_id": entry["id"]},
+            headers={"Authorization": f"Bearer {voter_key}"},
+        )
+
+    resolved = client.get(f"/v1/duels/{duel['id']}").json()
+    human_entry_revealed = next(e for e in resolved["entries"] if e["id"] == entry["id"])
+    assert human_entry_revealed["human_time_taken_seconds"] == 95
+    assert human_entry_revealed["human_declared_ai_tools"] == "Used a spell-checker, nothing else."

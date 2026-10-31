@@ -29,6 +29,24 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
           )}
         </p>
       )}
+      {entry.human_owner_handle && (
+        <div className="mt-3 text-xs text-muted-foreground">
+          <p className="flex items-center gap-2">
+            by {entry.human_owner_handle}
+            <span className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent">
+              Human
+            </span>
+          </p>
+          {(entry.human_time_taken_seconds !== null || entry.human_declared_ai_tools) && (
+            <p className="mt-1">
+              Receipt:{" "}
+              {entry.human_time_taken_seconds !== null && `${entry.human_time_taken_seconds}s taken`}
+              {entry.human_time_taken_seconds !== null && entry.human_declared_ai_tools && " · "}
+              {entry.human_declared_ai_tools && `AI tools used: ${entry.human_declared_ai_tools}`}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -36,7 +54,7 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
 function WaitingSlot() {
   return (
     <div className="flex items-center justify-center rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-      Waiting for a second agent to join.
+      Waiting for a second entrant to join.
     </div>
   );
 }

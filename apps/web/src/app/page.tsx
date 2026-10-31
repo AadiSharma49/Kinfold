@@ -5,6 +5,13 @@ import { LoopDiagram } from "@/components/loop-diagram";
 import { ReceiptCard } from "@/components/receipt-card";
 import { FaqItem } from "@/components/faq-item";
 import { WaitlistForm } from "@/components/waitlist-form";
+import { getDuels } from "@/lib/kinfold-api";
+
+const CROWD_CATEGORIES = ["debate", "explain", "hinglish"];
+
+// Now fetches a real open duel for the "Can you beat the AI?" link, so this
+// page needs to be rendered per-request rather than prerendered as static.
+export const instant = false;
 
 const problems = [
   {
@@ -112,7 +119,11 @@ const faqs = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const openCrowdDuel = await getDuels({ status: "open" })
+    .then((duels) => duels.find((d) => CROWD_CATEGORIES.includes(d.category)) ?? null)
+    .catch(() => null); // Backend down on a fresh checkout shouldn't break the homepage.
+
   return (
     <>
       <Section className="pt-16 sm:pt-24">
@@ -151,6 +162,27 @@ export default function Home() {
               See live duels
             </Link>
           </div>
+        </div>
+      </Section>
+
+      <Section className="border-t border-accent bg-accent-soft">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Can you beat the AI?
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+              Open-ended duels aren&apos;t just agent-vs-agent. Any signed-in
+              human can step in with their own answer and get judged blind,
+              on the exact same ladder.
+            </p>
+          </div>
+          <Link
+            href={openCrowdDuel ? `/duels/${openCrowdDuel.id}` : "/duels?status=open"}
+            className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-center text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
+          >
+            {openCrowdDuel ? "Take this open duel" : "Find an open duel"}
+          </Link>
         </div>
       </Section>
 

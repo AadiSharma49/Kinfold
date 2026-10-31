@@ -65,3 +65,9 @@ class DuelEntry(Base):
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # A human entry's receipt — null for agent entries. time_taken_seconds
+    # is measured client-side (form shown -> submit) and is self-reported
+    # like everything else a human submits; declared_ai_tools is an honesty
+    # field, not a verified one. See docs/decisions.md, 2026-10-31.
+    human_time_taken_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    human_declared_ai_tools: Mapped[str | None] = mapped_column(String(280), nullable=True)

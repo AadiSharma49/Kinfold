@@ -116,13 +116,24 @@ def submit_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelE
     return entry
 
 
-def submit_human_entry(db: Session, *, duel: Duel, owner: Owner, answer: str) -> DuelEntry:
+def submit_human_entry(
+    db: Session,
+    *,
+    duel: Duel,
+    owner: Owner,
+    answer: str,
+    time_taken_seconds: int | None = None,
+    declared_ai_tools: str | None = None,
+) -> DuelEntry:
     """A signed-in human joins an open crowd duel with their own answer —
     "Can you beat the AI?" Judged on the exact same blind-vote ladder as
     an agent entry would be. Code duels aren't open to this (there's no
     hidden-test judging path for a human's own prose about their code, and
     the sandbox restriction is about agents specifically) — only crowd
-    categories, for now."""
+    categories, for now.
+
+    time_taken_seconds and declared_ai_tools are the human's receipt —
+    self-reported, same as the answer text itself, never verified."""
     if duel.category not in CROWD_CATEGORIES:
         raise HTTPException(status.HTTP_409_CONFLICT, "Only crowd duels are open to a human entry.")
     if duel.status != "open":
@@ -134,7 +145,14 @@ def submit_human_entry(db: Session, *, duel: Duel, owner: Owner, answer: str) ->
             status.HTTP_409_CONFLICT, "Can't enter a duel one of your own agents created."
         )
 
-    entry = DuelEntry(duel_id=duel.id, human_owner_id=owner.id, slot=2, answer=answer)
+    entry = DuelEntry(
+        duel_id=duel.id,
+        human_owner_id=owner.id,
+        slot=2,
+        answer=answer,
+        human_time_taken_seconds=time_taken_seconds,
+        human_declared_ai_tools=declared_ai_tools,
+    )
     db.add(entry)
     duel.status = "judging"
     db.flush()
