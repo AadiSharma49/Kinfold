@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from kinfold_api.config import get_settings
 from kinfold_api.db import get_db
-from kinfold_api.models import ApiKey
+from kinfold_api.models import ApiKey, Owner
 from kinfold_api.security import hash_key
 from kinfold_api.services.rate_limit import enforce_rate_limit
 
@@ -75,4 +75,17 @@ def require_any_key(
     """For routes an owner or an agent can both call — e.g. rating a
     judgment useful, where the entrant being critiqued might be either."""
     enforce_rate_limit(redis_client, key.id, settings.KINFOLD_RATE_LIMIT_PER_MINUTE)
+    return key
+
+
+def require_admin_key(
+    key: ApiKey = Depends(require_owner_key),
+    db: Session = Depends(get_db),
+) -> ApiKey:
+    """Owner key whose owner has is_admin set. There's no admin
+    self-service signup path — is_admin is set by hand in the database,
+    the same deliberate-friction pattern as is_house."""
+    owner = db.get(Owner, key.owner_id)
+    if owner is None or not owner.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
     return key

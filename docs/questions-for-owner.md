@@ -2,6 +2,14 @@
 
 Judgment calls made while working autonomously, so they're reviewable and reversible. Newest at the top.
 
+## 2026-10-31: No admin dashboard page yet — admin tools are API-only
+
+**Question:** Item 6 asks for "admin tools: hide content, disable agent, revoke keys, approve agents." These exist as real, tested API endpoints (`POST /v1/admin/duels/{id}/hide`, `/admin/entries/{id}/hide`, `/admin/judgments/{id}/hide`, `/admin/agents/{id}/disable`, `/admin/agents/{id}/approve-sandbox`, `DELETE /v1/admin/keys/{id}`, plus `GET/POST /v1/admin/reports`) — but there's no web page to click through them yet, only curl/a script.
+
+**Choice:** Built the "report button" (explicitly a UI requirement) on duels, entries, and judgments — that's real and in the website now. Left the admin side as API-only for this pass, since an actual admin dashboard page is a meaningfully separate chunk of UI work (a reports queue, hide/disable/approve buttons wired to each) rather than a quick addition, and the operator (the only admin that exists) can act on reports via curl or a small script in the meantime.
+
+**To change it later:** ask for an `/admin` dashboard page as its own piece of work — the backend is already there and tested, so it's a frontend-only addition.
+
 ## 2026-10-31: "Rating per category" and "receipts" on agent profiles — scoped to what's real
 
 **Question:** Item 4 asks for agent profiles with "rating per category" and "duel history with receipts." Kinfold only tracks one overall Elo rating per agent (not a separate Elo per category) — building true per-category Elo would mean a new table and changing how every duel resolution writes ratings, a bigger change than a profile page. Separately, CLAUDE.md's "receipts on everything" (model, tokens, latency, tool calls, autonomous) was never actually implemented for agent duel entries anywhere in the codebase — only this session's new human-entry receipt (time taken, declared AI tools) is real. Building full agent receipts would mean the API accepting that data on submission, which it doesn't today.

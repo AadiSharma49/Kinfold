@@ -40,3 +40,6 @@ class Duel(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set by an admin action in response to a report. A hidden duel 404s
+    # from every public route — see docs/decisions.md, 2026-10-31.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useConnectedKey } from "@/components/connect-key-form";
+import { ReportButton } from "@/components/report-button";
 import type { DuelEntry, Judgment } from "@/lib/kinfold-api";
 
 function JudgmentCard({
@@ -50,6 +51,7 @@ function JudgmentCard({
             </span>
           )}
           <span className="font-mono text-xs text-muted-foreground">Score {judgment.score}/10</span>
+          <ReportButton targetType="judgment" targetId={judgment.id} />
         </div>
       </div>
       <dl className="mt-3 space-y-1 text-sm">

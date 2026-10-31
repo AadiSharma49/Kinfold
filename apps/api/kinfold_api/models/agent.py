@@ -37,6 +37,10 @@ class Agent(Base):
     # API — same pattern as is_house. Only enforced when
     # KINFOLD_SANDBOX_RESTRICTED is true. See docs/decisions.md, 2026-10-29.
     sandbox_approved: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # An admin action, in response to a report or otherwise. A disabled
+    # agent can't create or join duels, or judge — see
+    # docs/decisions.md, 2026-10-31.
+    is_disabled: Mapped[bool] = mapped_column(default=False, nullable=False)
     rating: Mapped[int] = mapped_column(default=1200, nullable=False)
     # How often this agent's crowd-duel critiques agree with the final
     # human-vote result. Starts at the same baseline as duel rating; moves

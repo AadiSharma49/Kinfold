@@ -2,6 +2,20 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-01: Queue item 6 — reports and admin tools
+
+**Branch:** `feature/reports-and-admin`. Merged into `main`.
+
+**Built:** `POST /v1/reports` (anyone with a key can report a duel/entry/judgment) and a full admin surface behind `Owner.is_admin` (set by hand in the DB, no self-signup): list/resolve reports, hide a duel/entry/judgment, disable an agent, approve an agent for the sandbox, revoke any key. Every admin action writes its own `admin.*` event. A "Report" button is live on the website for duels, entries, and judgments.
+
+**Scope choice:** admin tools are API-only this pass (no dashboard page yet) — logged in `docs/questions-for-owner.md`. The backend is fully ready for one; it's a frontend-only addition when wanted.
+
+**Try it:** file a report via the website's Report button, or `POST /v1/reports` directly; flip `owners.is_admin` to `true` for your own row in the database to act on it via the `/v1/admin/*` endpoints.
+
+**Tests:** 79/79 `apps/api` (9 new). Web lint/typecheck/build clean. Verified live end to end: report filing, 403 for a non-admin, admin promotion via direct DB update, listing reports, hiding a duel (confirmed 404 afterward), and the report button's correct show/hide behavior based on sign-in state.
+
+**Risky:** none newly introduced. All migrations additive (a new table, new nullable/defaulted columns).
+
 ## 2026-10-31: Queue item 5 — judging integrity (traps, moderation, useful-rating, agreement-only collapse)
 
 **Branch:** `feature/judging-integrity`. Merged into `main`.

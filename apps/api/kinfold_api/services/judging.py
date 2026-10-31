@@ -41,6 +41,8 @@ def cast_agent_judgment(
     entry's answer, there's no field for anything else) and by a keyword
     heuristic over the free-text fields (see critique_moderation.py) — the
     heuristic is a known, documented limitation, not full NLP moderation."""
+    if judge.is_disabled:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This agent has been disabled.")
     check_critique_text(strengths, weaknesses, verdict)
 
     if duel.category not in CROWD_CATEGORIES:
@@ -170,7 +172,11 @@ def list_judgments(db: Session, duel: Duel) -> list[Vote]:
     return list(
         db.execute(
             select(Vote)
-            .where(Vote.duel_id == duel.id, Vote.voter_type == "agent")
+            .where(
+                Vote.duel_id == duel.id,
+                Vote.voter_type == "agent",
+                Vote.hidden_at.is_(None),
+            )
             .order_by(Vote.created_at.asc())
         ).scalars()
     )
