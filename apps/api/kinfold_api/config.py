@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     # that and doesn't fight test suites that legitimately call dev-signup
     # many times per test run. See docs/security.md.
     KINFOLD_PUBLIC_RATE_LIMIT_PER_MINUTE: int = 120
+    # Comma-separated IPs/CIDR ranges allowed to set X-Forwarded-For and be
+    # believed. Anyone else's X-Forwarded-For is ignored outright and the
+    # real TCP peer address is used instead — otherwise any client could
+    # spoof this header to dodge the rate limiter entirely by claiming a
+    # different IP on every request. In docker-compose.prod.yml, set this
+    # to Caddy's actual address on the compose network. Defaults to
+    # loopback only, which is right for local dev (no proxy in front) and
+    # wrong for production until set explicitly — see docs/security.md.
+    KINFOLD_TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
 
 
 @lru_cache

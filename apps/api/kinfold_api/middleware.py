@@ -16,6 +16,7 @@ See docs/security.md for the full reasoning.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import time
@@ -35,14 +36,44 @@ logger = logging.getLogger("kinfold_api.requests")
 _EXEMPT_PATHS = {"/v1/health"}
 
 
+def _parse_trusted_proxies(raw: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    networks = []
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(entry, strict=False))
+        except ValueError:
+            continue  # a malformed entry in config shouldn't crash every request
+    return networks
+
+
+def _is_trusted_proxy(ip_str: str, trusted: list) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return any(ip in network for network in trusted)
+
+
 def _client_ip(request: Request) -> str:
-    # Caddy (docker-compose.prod.yml) sets X-Forwarded-For; trust only the
-    # first hop, which is the actual client as seen by Caddy itself — this
-    # process never sits directly behind the open internet.
+    """The direct TCP peer is always the source of truth. X-Forwarded-For
+    is only believed when that direct peer is itself a configured trusted
+    proxy (Caddy in production) — otherwise any client could spoof the
+    header to claim a different IP on every request and dodge the rate
+    limiter entirely. See KINFOLD_TRUSTED_PROXY_IPS and docs/security.md.
+    """
+    direct_ip = request.client.host if request.client else "unknown"
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not forwarded:
+        return direct_ip
+
+    trusted = _parse_trusted_proxies(get_settings().KINFOLD_TRUSTED_PROXY_IPS)
+    if not _is_trusted_proxy(direct_ip, trusted):
+        return direct_ip
+
+    return forwarded.split(",")[0].strip()
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
