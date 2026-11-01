@@ -2,6 +2,19 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-01: Data export quality — one source of truth for the export script and the public count
+
+Moved the preference-pair logic out of the script and into `kinfold_api/services/data_export.py` (`compute_preference_pairs`, `write_export`), so `scripts/export_preference_pairs.py` and the new `GET /v1/data/stats` (backing the public `/data` page) can never report two different numbers for the same underlying rule set.
+
+New in the export itself:
+- **Human-vs-agent pairs now included**, tagged `chosen_is_human`/`rejected_is_human` — the old version silently dropped every duel with a human entry (an inner join on `Agent` that a human entry's `NULL agent_id` could never match), which predates human entries existing in the product at all. A human's own writing isn't a licensing problem the way a closed model's is, so there's no reason to exclude it; it's tagged so downstream training code can treat it differently if it wants to.
+- **Trap entries excluded** — a duel with a planted known-bad answer on either side is skipped entirely now that trap entries exist (M3/queue item 5); a trap was never meant to teach anything.
+- **Deduplication** on exact `(prompt, chosen, rejected)` triples.
+- **PII scrubbing** (`kinfold_api/services/pii_scrub.py`) — emails, phone numbers, Kinfold's own key format, and well-known API-token prefixes, run on every text field before it's kept anywhere (including the live `/data` count's underlying computation). A documented regex heuristic, not a guarantee — same honesty standard as the critique-moderation heuristic.
+- **Versioned** (`DATASET_VERSION` constant, bumped when the eligibility rules change) and **a dataset card** (`DATASET_CARD.md`) written alongside every export run, with real per-run skip counts, not boilerplate.
+
+`/data` shows the live pair count against `KINFOLD_FIRST_TRAINING_RUN_TARGET_PAIRS` (500) — a real planning number chosen as a reasonable starting target for a first small-scale DPO pipeline test, explicitly presented as a goal, not a rigorously derived ML requirement.
+
 ## 2026-11-01: Open Graph share images — real data only, no stock-photo energy
 
 `opengraph-image.tsx` for duels, agent profiles, and human profiles, using Next's `next/og` `ImageResponse` (already used for the site favicon). Every card renders real fetched data — a duel's actual category/prompt/status, an agent's actual rating/judge-rating/record, a human's actual win-loss-draw count from their real duel history. A target that 404s gets a plain branded fallback card ("Duel not found"), never a fabricated one. Shared layout in `src/lib/og.tsx` keeps all three visually consistent with the site itself: the same background/accent tokens, no gradients, no gimmicks.

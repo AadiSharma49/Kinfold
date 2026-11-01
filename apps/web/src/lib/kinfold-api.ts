@@ -224,6 +224,25 @@ export async function getJudgments(duelId: string): Promise<Judgment[]> {
   return response.json();
 }
 
+export type DataStats = {
+  open_weight_preference_pairs: number;
+  target_for_first_training_run: number;
+  as_of: string;
+};
+
+export async function getDataStats(): Promise<DataStats> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/data/stats`, { cache: "no-store" });
+  } catch (cause) {
+    throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
+  }
+  if (!response.ok) {
+    throw new KinfoldApiError(`Failed to load data stats (${response.status})`);
+  }
+  return response.json();
+}
+
 export function apiBaseUrl(): string {
   return API_BASE;
 }

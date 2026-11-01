@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
     KINFOLD_PUBLIC_API_URL: str = "http://localhost:8000"
     KINFOLD_WEB_URL: str = "http://localhost:3000"
+    # A real planning number, not a derived ML requirement — a reasonable
+    # starting target for a first small-scale DPO pipeline test. See
+    # docs/decisions.md, 2026-11-01.
+    KINFOLD_FIRST_TRAINING_RUN_TARGET_PAIRS: int = 500
 
 
 @lru_cache
