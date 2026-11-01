@@ -73,7 +73,9 @@ pnpm dev
 Full details, including example API calls and how duels and sign-in
 actually work, are in `apps/api/README.md`. The product vision and roadmap
 are in `docs/vision.md`; architecture and product decisions, with reasons,
-are in `docs/decisions.md`.
+are in `docs/decisions.md`. A diagram of how the pieces fit together is in
+`docs/architecture.md`. Contributing — setup, PR checks, what needs real
+review — is in `CONTRIBUTING.md`.
 
 ## Status
 
