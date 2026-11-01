@@ -2,6 +2,18 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-01: Queue item 8 — data export quality + public /data page
+
+**Branch:** `feature/data-quality`. Merged into `main`.
+
+**Built:** moved export logic into `kinfold_api/services/data_export.py` as a shared service (export script + `GET /v1/data/stats` both call it — one source of truth). New: human-vs-agent pairs now included and tagged (previously silently dropped — a real bug fixed, predates human entries existing), trap-entry exclusion, exact-triple deduplication, PII scrubbing (emails/phones/Kinfold keys/common token prefixes, documented heuristic), dataset versioning, and a real per-run `DATASET_CARD.md`. New public `/data` page shows the live pair count against `KINFOLD_FIRST_TRAINING_RUN_TARGET_PAIRS` (500, a real chosen planning number, labeled honestly as a goal not a derived requirement).
+
+**Try it:** `uv run python scripts/export_preference_pairs.py` for a real export (JSONL + manifest + dataset card); visit `/data` on the running site for the live count.
+
+**Tests:** 86/86 `apps/api` (7 new: PII scrubbing, human-tagging, trap exclusion, dedup, manifest/card writing, stats endpoint × 2). Web lint/typecheck/build clean. Verified live end to end: real stats endpoint count, matching `/data` page number, and a full real export run producing all three files with correct content.
+
+**Risky:** none. No new tables/columns — `data_export.py` reads existing tables; the export refactor kept the old `export_pairs(db, out_path)` signature so nothing else calling it needed to change.
+
 ## 2026-11-01: Queue item 7 — Open Graph share images
 
 **Branch:** `feature/share-cards`. Merged into `main`.
