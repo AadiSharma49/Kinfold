@@ -2,6 +2,68 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-01: Critique moderation audit — how it decides "personal comment," tested on 20 examples
+
+**How it decides today:** `kinfold_api/services/critique_moderation.py` is a
+keyword/regex heuristic, documented as such — not real NLP. It checks every
+free-text judgment field against a fixed list of regex patterns (bare
+personal-insult words; subject-plus-attribute patterns like "he is
+obviously a..."; topic words for race/religion/sexuality/immigration
+status; possessive-plus-personal-topic patterns like "his family..."). Any
+match blocks the submission with a 400 and a fixed message. It has no
+understanding of meaning, context, or language beyond literal
+string/pattern matching — it either contains a blocked token/shape or it
+doesn't.
+
+**Test: 20 example critiques** (5 each: normal English, normal Hinglish,
+personal-attack English, personal-attack Hinglish — full list in the new
+`tests/test_critique_moderation.py`). Before any fix: 9/10 normal critiques
+correctly allowed (1 false positive) and 6/10 personal attacks correctly
+blocked (4 misses) — 15/20 (75%) correct overall.
+
+Concretely, before the fix: **1 false positive** — "This looks like it was
+rushed..." was blocked, because the original pattern matched any "looks
+like" phrase, not just "looks like an idiot"-shaped insults. **4 misses**:
+"This person is clearly an idiot..." (the subject pattern only recognized
+he/she/they, not "this person"/"the writer"); "...sounds foreign..." (the
+word list had "foreigner" but not "foreign"); a Hinglish sentence using the
+English word "dumb" on its own ("...pakka dumb hai...": the original word
+list only blocked "stupid"/"dumb" when preceded by "looks", not standalone);
+and a Hinglish personal-background attack using Hindi possessives ("Uski
+family background...": the pattern required English "his/her/their", which
+"uski" never matches). Net: 15/20 correct (75%) before any change — the
+heuristic's keyword-only nature meant it had essentially zero native
+Hinglish coverage beyond catching an English slur that happened to be
+embedded in an otherwise-Hindi sentence.
+
+**Fix applied** (still a keyword heuristic — real NLP moderation remains a
+reasonable future step, not built here): added a standalone personal-insult
+word list (stupid, dumb, idiot, moron, incompetent, plus common Hinglish
+insults — bewakoof, nalayak, pagal, ullu — the original list had zero
+non-English words); narrowed the "looks X" pattern to drop "like" so the
+common benign phrase "looks like..." stops false-positiving; widened the
+subject pattern to cover "this person"/"the writer"/"the author"/"whoever
+wrote this", not just he/she/they; added "foreign" alongside "foreigner";
+added Hinglish possessives (uski/uska/iska/iski) alongside his/her/their
+for the personal-background pattern. Re-ran the same 20 examples: **20/20
+correct**, 0 false positives, 0 misses, now with real Hinglish-specific
+coverage instead of accidental catches. Locked in by
+`tests/test_critique_moderation.py` (20 new tests) so a future edit can't
+silently reopen these.
+
+**Known remaining limitation, unchanged:** still keyword/regex, not
+semantic — a personal attack phrased without any of these specific words or
+shapes (in either language) will not be caught, and an unusual but
+legitimate critique that happens to contain a listed word could still be
+blocked. This is the same honesty tradeoff as before, just with a measured
+baseline and a real fix instead of an unverified claim.
+
+**Tests:** 117/117 `apps/api` (20 new). No frontend changes.
+
+**Risky:** none — stricter in a few directions (Hinglish insults, "this
+person" phrasing), looser in exactly one (the "looks like" false positive),
+all covered by the new test file.
+
 ## 2026-11-01: Hardening — trusted-proxy IP fix + load test / capacity estimate
 
 **Branch:** `feature/hardening`.
