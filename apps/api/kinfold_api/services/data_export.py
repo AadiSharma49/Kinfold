@@ -10,6 +10,11 @@ Rules, each with a reason:
   the rejected text would still be training data otherwise.
 - Either entry is_trap -> whole duel skipped — a trap is deliberately bad,
   never meant to teach a model anything, agent or human side.
+- Either human entry is flagged human_suspected_ai -> whole pair skipped.
+  We cannot prove humanity, so we don't claim it in training data when our
+  own signals say the entry doesn't look human-typed — see
+  docs/decisions.md, 2026-11-01. The entry stays on the public ladder;
+  it's only excluded here.
 - Draws -> skipped — no winner means no preference signal.
 - Exact duplicate (prompt, chosen, rejected) triples -> only the first is
   kept.
@@ -66,17 +71,22 @@ class ExportManifest:
     duels_skipped_closed_weight: int
     duels_skipped_trap: int
     duels_skipped_duplicate: int
+    duels_skipped_suspected_ai: int
     files: list[str] = field(default_factory=list)
 
 
-def _entry_eligibility(entry: DuelEntry, agents_by_id: dict[uuid.UUID, Agent]) -> tuple[bool, bool]:
-    """Returns (eligible, is_human)."""
+def _entry_eligibility(
+    entry: DuelEntry, agents_by_id: dict[uuid.UUID, Agent]
+) -> tuple[bool, bool, bool]:
+    """Returns (eligible, is_human, is_suspected_ai)."""
     if entry.human_owner_id is not None:
-        return True, True
+        if entry.human_suspected_ai:
+            return False, True, True
+        return True, True, False
     agent = agents_by_id.get(entry.agent_id) if entry.agent_id else None
     if agent is None:
-        return False, False
-    return agent.open_weights, False
+        return False, False, False
+    return agent.open_weights, False, False
 
 
 def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportManifest]:
@@ -89,6 +99,7 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
     skipped_closed = 0
     skipped_trap = 0
     skipped_dup = 0
+    skipped_suspected_ai = 0
 
     for duel in duels:
         entries = db.execute(
@@ -115,10 +126,15 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
             else {}
         )
 
-        chosen_ok, chosen_is_human = _entry_eligibility(chosen_entry, agents_by_id)
-        rejected_ok, rejected_is_human = _entry_eligibility(rejected_entry, agents_by_id)
+        chosen_ok, chosen_is_human, chosen_suspected = _entry_eligibility(chosen_entry, agents_by_id)
+        rejected_ok, rejected_is_human, rejected_suspected = _entry_eligibility(
+            rejected_entry, agents_by_id
+        )
         if not (chosen_ok and rejected_ok):
-            skipped_closed += 1
+            if chosen_suspected or rejected_suspected:
+                skipped_suspected_ai += 1
+            else:
+                skipped_closed += 1
             continue
 
         prompt = scrub_pii(duel.prompt)
@@ -151,6 +167,7 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
         duels_skipped_closed_weight=skipped_closed,
         duels_skipped_trap=skipped_trap,
         duels_skipped_duplicate=skipped_dup,
+        duels_skipped_suspected_ai=skipped_suspected_ai,
     )
     return pairs, manifest
 
@@ -178,8 +195,14 @@ Kinfold itself.
   on either side ({duels_skipped_trap} duels skipped for this).
 - Exact-duplicate (prompt, chosen, rejected) triples: only the first copy
   kept ({duels_skipped_duplicate} duplicates skipped).
+- A self-declared human entry flagged by Kinfold's own AI-suspicion signals
+  (answer length/speed, large single pastes) skips the whole pair
+  ({duels_skipped_suspected_ai} duels skipped for this). We cannot prove
+  humanity, so we label honestly and filter the data instead of claiming
+  it — see `docs/decisions.md`. The entry stays on the public ladder; it's
+  only excluded here.
 - `chosen_is_human` / `rejected_is_human` tag which side (if either) was a
-  real human's own answer, not an agent's.
+  self-declared human's own answer, not an agent's.
 
 ## Known limitations
 
@@ -211,6 +234,7 @@ def write_export(db: Session, out_path: Path) -> ExportManifest:
                 "duels_skipped_closed_weight": manifest.duels_skipped_closed_weight,
                 "duels_skipped_trap": manifest.duels_skipped_trap,
                 "duels_skipped_duplicate": manifest.duels_skipped_duplicate,
+                "duels_skipped_suspected_ai": manifest.duels_skipped_suspected_ai,
             },
             indent=2,
         ),
@@ -227,6 +251,7 @@ def write_export(db: Session, out_path: Path) -> ExportManifest:
             duels_skipped_closed_weight=manifest.duels_skipped_closed_weight,
             duels_skipped_trap=manifest.duels_skipped_trap,
             duels_skipped_duplicate=manifest.duels_skipped_duplicate,
+            duels_skipped_suspected_ai=manifest.duels_skipped_suspected_ai,
         ),
         encoding="utf-8",
     )

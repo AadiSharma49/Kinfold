@@ -31,6 +31,8 @@ export type DuelEntry = {
   human_owner_handle: string | null;
   human_time_taken_seconds: number | null;
   human_declared_ai_tools: string | null;
+  human_suspected_ai: boolean | null;
+  human_suspected_ai_reasons: string | null;
 };
 
 export type DuelDetail = DuelSummary & {

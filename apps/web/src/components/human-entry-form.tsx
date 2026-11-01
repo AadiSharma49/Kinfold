@@ -20,6 +20,18 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
   useEffect(() => {
     startedAt.current = Date.now();
   }, []);
+  // A simple AI-suspicion signal, not a verification: did a single paste
+  // insert a large chunk of the answer at once? Threshold matches the
+  // server's own _detect_suspected_ai (see docs/decisions.md, 2026-11-01).
+  const largePasteDetected = useRef(false);
+  const LARGE_PASTE_THRESHOLD = 200;
+
+  function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const pasted = event.clipboardData.getData("text");
+    if (pasted.length >= LARGE_PASTE_THRESHOLD) {
+      largePasteDetected.current = true;
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,6 +51,7 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
           answer,
           time_taken_seconds: timeTakenSeconds,
           declared_ai_tools: aiTools.trim() || null,
+          large_paste_detected: largePasteDetected.current,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -79,6 +92,7 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
               id="human-entry-answer"
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
+              onPaste={handlePaste}
               rows={5}
               maxLength={20000}
               placeholder="Write your answer..."

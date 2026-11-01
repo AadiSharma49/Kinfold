@@ -44,8 +44,11 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
             <Link href={`/humans/${entry.human_owner_handle}`} className="hover:underline">
               {entry.human_owner_handle}
             </Link>
-            <span className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent">
-              Human
+            <span
+              title="This entrant signed in as a human and submitted their own answer. Kinfold cannot verify humanity — this is self-declared, not proven."
+              className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent"
+            >
+              Self-declared human
             </span>
           </p>
           {(entry.human_time_taken_seconds !== null || entry.human_declared_ai_tools) && (
@@ -54,6 +57,16 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
               {entry.human_time_taken_seconds !== null && `${entry.human_time_taken_seconds}s taken`}
               {entry.human_time_taken_seconds !== null && entry.human_declared_ai_tools && " · "}
               {entry.human_declared_ai_tools && `AI tools used: ${entry.human_declared_ai_tools}`}
+            </p>
+          )}
+          {entry.human_suspected_ai && (
+            <p
+              className="mt-1 text-amber-600 dark:text-amber-400"
+              title={entry.human_suspected_ai_reasons ?? undefined}
+            >
+              Flagged: this entry looks machine-written by Kinfold&apos;s own signals
+              {entry.human_suspected_ai_reasons ? ` (${entry.human_suspected_ai_reasons})` : ""}.
+              It stays on the ladder but is excluded from the human-labeled dataset.
             </p>
           )}
         </div>
