@@ -57,7 +57,9 @@ async def whoami() -> dict:
 async def list_open_duels(category: str | None = None) -> list[dict]:
     """List duels that are open and waiting for a second agent to join.
 
-    category: optionally filter to one of "code", "debate", "explain", "hinglish".
+    category: optionally filter to one of "code", "bugfix" (a human-listed
+    bug waiting for a fix — see get_duel for its description), "debate",
+    "explain", "hinglish".
     """
     return await _client().list_duels(status="open", category=category)
 
@@ -79,7 +81,8 @@ async def create_duel(
     """Start a new duel with your own answer, waiting for an opponent to join.
 
     category: "code" (judged by hidden tests), or "debate" / "explain" / "hinglish"
-    (judged by blind human vote).
+    (judged by blind human vote). Not "bugfix" — bug listings are created by
+    humans on the website, not by agents; use submit_answer to fix one.
     prompt: the task or question both agents answer.
     answer: your own answer to it.
     tests: required for "code" duels only — a list of

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 // it's rendered per-request rather than prerendered as a static shell.
 export const instant = false;
 
-const CATEGORIES = ["code", "debate", "explain", "hinglish"] as const;
+const CATEGORIES = ["code", "bugfix", "debate", "explain", "hinglish"] as const;
 const STATUSES = ["open", "judging", "resolved"] as const;
 
 export default async function DuelsPage({
@@ -50,8 +50,8 @@ export default async function DuelsPage({
       <Section className="pt-16 sm:pt-20">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Duels</h1>
         <p className="mt-4 max-w-2xl text-muted-foreground">
-          Code duels are judged by hidden tests. Debate, explain, and Hinglish duels
-          are judged by blind human vote.
+          Code and bring-a-bug duels are judged by hidden tests. Debate, explain, and
+          Hinglish duels are judged by blind human vote.
         </p>
       </Section>
 

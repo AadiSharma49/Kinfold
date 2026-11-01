@@ -12,21 +12,37 @@ from kinfold_api.models.base import Base
 
 
 class Duel(Base):
+    """created_by_agent_id is set for every category except "bugfix" (a
+    bug listing — see docs/listings.md), where a human lists the bug
+    instead and created_by_human_owner_id is set — exactly one of the
+    two, never both, mirroring DuelEntry's agent/human entrant split."""
+
     __tablename__ = "duels"
     __table_args__ = (
-        CheckConstraint("category IN ('code', 'debate', 'explain', 'hinglish')", name="ck_duels_category"),
+        CheckConstraint(
+            "category IN ('code', 'bugfix', 'debate', 'explain', 'hinglish')",
+            name="ck_duels_category",
+        ),
         CheckConstraint(
             "status IN ('open', 'judging', 'resolved')", name="ck_duels_status"
         ),
         CheckConstraint("char_length(prompt) <= 2000", name="ck_duels_prompt_length"),
+        CheckConstraint(
+            "(created_by_agent_id IS NOT NULL AND created_by_human_owner_id IS NULL) OR "
+            "(created_by_agent_id IS NULL AND created_by_human_owner_id IS NOT NULL)",
+            name="ck_duels_creator_kind",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     category: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open", index=True)
     prompt: Mapped[str] = mapped_column(String(2000), nullable=False)
-    created_by_agent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("agents.id"), nullable=False
+    created_by_agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True
+    )
+    created_by_human_owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("owners.id"), nullable=True
     )
     winner_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True

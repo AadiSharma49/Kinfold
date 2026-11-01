@@ -94,6 +94,89 @@ def create_duel(
     return duel
 
 
+def create_bug_listing(
+    db: Session, *, owner: Owner, prompt: str, tests: list[tuple[str, str]]
+) -> Duel:
+    """"Bring a bug" (see docs/listings.md): a human lists a real bug —
+    prompt is the description/repro steps, tests are the hidden test
+    case(s) that currently fail. No entry is created here; two agents
+    submit competing fixes via submit_entry, same hidden-test judging as
+    a "code" duel. The listing owner never enters their own listing."""
+    duel = Duel(
+        category="bugfix",
+        status="open",
+        prompt=prompt,
+        created_by_human_owner_id=owner.id,
+    )
+    db.add(duel)
+    db.flush()
+
+    for index, (test_input, expected_output) in enumerate(tests):
+        db.add(
+            DuelTest(
+                duel_id=duel.id,
+                order_index=index,
+                input=test_input,
+                expected_output=expected_output,
+            )
+        )
+
+    db.flush()
+    append_event(
+        db,
+        type="listing.created",
+        owner_id=owner.id,
+        payload={"duel_id": str(duel.id)},
+    )
+    db.commit()
+    db.refresh(duel)
+    return duel
+
+
+def _submit_bugfix_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelEntry:
+    """Bug listings have no first-entrant creator answer to compare
+    against — both slots are filled by competing agent fixes, first come
+    first served. Resolution (hidden tests, Elo) is identical to a "code"
+    duel once both slots are filled — see resolve_verified_duel."""
+    if agent.owner_id == duel.created_by_human_owner_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Can't submit a fix to your own bug listing.")
+    _ensure_sandbox_access(agent)
+
+    existing = db.execute(
+        select(DuelEntry).where(DuelEntry.duel_id == duel.id)
+    ).scalars().all()
+    if any(e.agent_id == agent.id for e in existing):
+        raise HTTPException(status.HTTP_409_CONFLICT, "This agent already submitted a fix.")
+    taken_slots = {e.slot for e in existing}
+    if 1 not in taken_slots:
+        slot = 1
+    elif 2 not in taken_slots:
+        slot = 2
+    else:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This listing already has two fixes submitted.")
+
+    entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=slot, answer=answer)
+    db.add(entry)
+    if slot == 2:
+        duel.status = "judging"
+    db.flush()
+
+    append_event(
+        db,
+        type="duel.entry_submitted",
+        agent_id=agent.id,
+        owner_id=agent.owner_id,
+        payload={"duel_id": str(duel.id), "slot": slot},
+    )
+    db.commit()
+    db.refresh(entry)
+
+    if slot == 2:
+        resolve_verified_duel(db, duel)
+        db.refresh(entry)
+    return entry
+
+
 def submit_entry(
     db: Session, *, duel: Duel, agent: Agent, answer: str, is_trap: bool = False
 ) -> DuelEntry:
@@ -106,6 +189,14 @@ def submit_entry(
     _ensure_agent_active(agent)
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
+
+    if duel.category == "bugfix":
+        if is_trap:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Trap entries aren't supported for bugfix listings."
+            )
+        return _submit_bugfix_entry(db, duel=duel, agent=agent, answer=answer)
+
     if agent.id == duel.created_by_agent_id:
         raise HTTPException(status.HTTP_409_CONFLICT, "An agent can't duel itself.")
     if duel.category in VERIFIED_CATEGORIES:
