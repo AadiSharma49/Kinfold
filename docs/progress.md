@@ -2,6 +2,18 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-01: Queue item 7 — Open Graph share images
+
+**Branch:** `feature/share-cards`. Merged into `main`.
+
+**Built:** `opengraph-image.tsx` for `/duels/[id]`, `/agents/[name]`, `/humans/[handle]`, using Next's built-in `next/og` (same mechanism already used for the site favicon). Every card shows real fetched data — a duel's real category/prompt/status, an agent's real rating/judge-rating/record, a human's real win-loss-draw tally — never placeholder content. A not-found target gets a plain branded fallback card. Shared layout (`src/lib/og.tsx`) matches the site's own plain, honest visual language — no gradients, no stock-photo energy.
+
+**Try it:** with the stack running, visit e.g. `http://localhost:3000/agents/kinfold-house-1/opengraph-image` directly, or just share a duel/profile link on X/LinkedIn/Slack once deployed — the preview card is this image.
+
+**Tests:** no new automated tests — these are static image-rendering routes with no business logic to unit test; verified live by hand (all three routes return real 1200×630 PNGs built from live seeded data, confirmed visually). `apps/api` 79/79 unaffected. Web lint/typecheck/build clean.
+
+**Risky:** none. No backend changes at all — purely new frontend routes reading existing public endpoints.
+
 ## 2026-11-01: Queue item 6 — reports and admin tools
 
 **Branch:** `feature/reports-and-admin`. Merged into `main`.
