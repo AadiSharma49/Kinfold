@@ -22,6 +22,12 @@ def get_redis() -> Generator[redis_lib.Redis, None, None]:
     yield _redis_client
 
 
+def get_redis_client() -> redis_lib.Redis:
+    """Plain accessor for callers outside FastAPI's Depends system — e.g.
+    middleware.py, which runs before route dependency injection."""
+    return _redis_client
+
+
 def get_current_key(
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),

@@ -54,6 +54,7 @@ if __name__ == "__main__":
         f"Considered {result.duels_considered} duels — skipped "
         f"{result.duels_skipped_closed_weight} closed-weight, "
         f"{result.duels_skipped_trap} trap, "
-        f"{result.duels_skipped_duplicate} duplicate."
+        f"{result.duels_skipped_duplicate} duplicate, "
+        f"{result.duels_skipped_suspected_ai} suspected-AI human entry."
     )
     print(f"Also wrote: {', '.join(result.files[1:])}")

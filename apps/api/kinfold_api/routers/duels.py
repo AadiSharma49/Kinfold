@@ -79,6 +79,8 @@ def _entry_out(
         # is the human one, defeating blind judging.
         human_time_taken_seconds=entry.human_time_taken_seconds if reveal else None,
         human_declared_ai_tools=entry.human_declared_ai_tools if reveal else None,
+        human_suspected_ai=entry.human_suspected_ai if reveal else None,
+        human_suspected_ai_reasons=entry.human_suspected_ai_reasons if reveal else None,
     )
 
 
@@ -186,6 +188,7 @@ def submit_human_entry_route(
         answer=body.answer,
         time_taken_seconds=body.time_taken_seconds,
         declared_ai_tools=body.declared_ai_tools,
+        large_paste_detected=body.large_paste_detected,
     )
     db.refresh(duel)
     owner_handles = owner_handle_lookup(db, [entry.human_owner_id]) if duel.status == "resolved" else {}

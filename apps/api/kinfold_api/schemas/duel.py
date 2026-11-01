@@ -50,6 +50,10 @@ class HumanEntrySubmitRequest(BaseModel):
     # when the entry form appeared to when they hit submit.
     time_taken_seconds: int | None = Field(default=None, ge=0, le=86400)
     declared_ai_tools: str | None = Field(default=None, max_length=280)
+    # Client-measured: did a single paste event insert a large chunk of the
+    # answer text at once? Combined server-side with time_taken_seconds into
+    # an AI-suspicion signal — see services/duels.py:_detect_suspected_ai.
+    large_paste_detected: bool = False
 
 
 class DuelEntryOut(BaseModel):
@@ -65,6 +69,8 @@ class DuelEntryOut(BaseModel):
     human_owner_handle: str | None = None
     human_time_taken_seconds: int | None = None
     human_declared_ai_tools: str | None = None
+    human_suspected_ai: bool | None = None
+    human_suspected_ai_reasons: str | None = None
 
 
 class DuelOut(BaseModel):

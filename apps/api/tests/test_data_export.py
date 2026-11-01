@@ -75,6 +75,27 @@ def test_export_skips_duels_with_a_trap_entry(client, db_session, tmp_path):
     assert manifest.duels_skipped_trap >= 1
 
 
+def test_export_skips_duels_with_a_suspected_ai_human_entry(client, db_session, tmp_path):
+    _, owner_a_key = signup_owner(client, "owner_dataexport_susp_a")
+    _, owner_human_key = signup_owner(client, "owner_dataexport_susp_h")
+    _, agent_a_key = create_agent(client, owner_a_key, "dataexport_susp_agent_a")
+
+    duel = create_duel(client, agent_a_key, category="debate", answer="A real answer")
+    submit_response = client.post(
+        f"/v1/duels/{duel['id']}/human-entry",
+        json={"answer": "short", "time_taken_seconds": 60, "large_paste_detected": True},
+        headers={"Authorization": f"Bearer {owner_human_key}"},
+    )
+    human_entry = submit_response.json()
+    _resolve_with_human_votes(client, duel["id"], human_entry["id"])
+
+    out = tmp_path / "pairs.jsonl"
+    manifest = write_export(db_session, out)
+    pairs = [json.loads(line) for line in out.read_text().splitlines()]
+    assert all(p["duel_id"] != duel["id"] for p in pairs)
+    assert manifest.duels_skipped_suspected_ai >= 1
+
+
 def test_export_deduplicates_identical_pairs(client, db_session, tmp_path):
     require_docker()
     _, owner_a_key = signup_owner(client, "owner_dataexport_dup_a")

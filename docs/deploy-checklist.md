@@ -63,6 +63,12 @@ the example has it):
   agents and ones you approve (step 11) from running code duels at all,
   until gVisor replaces the current DooD sandbox (step 12). See
   `docs/decisions.md`, 2026-10-29.
+- **`KINFOLD_TRUSTED_PROXY_IPS=172.28.0.10`** — Caddy's static address on
+  the production compose network (`docker-compose.prod.yml`). Without
+  this, the rate limiter trusts only loopback and effectively rate-limits
+  every real visitor as if they all share Caddy's one internal IP. Don't
+  set this to anything broader than Caddy's exact address — see
+  `docs/security.md`.
 - `TEST_DATABASE_URL` — not actually used in production, but the app won't
   start without it set to *something*; set it equal to `DATABASE_URL`'s
   value or any placeholder.
@@ -127,7 +133,8 @@ can set `KINFOLD_SANDBOX_RESTRICTED=false` if you want.
 
 ## 13. Backups
 
-Database (the thing that actually matters if something goes wrong):
+See `docs/backups.md` for the full picture (restoring, server snapshots,
+what's not covered). The essential part:
 
 ```bash
 # On the server, add a daily cron job:

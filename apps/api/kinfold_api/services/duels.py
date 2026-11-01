@@ -133,6 +133,41 @@ def submit_entry(
     return entry
 
 
+# Simple, documented heuristics — not a verdict. We cannot prove humanity,
+# so a flagged entry stays on the ladder and is judged normally; it is only
+# excluded from the "human" side of the dataset export. See
+# docs/decisions.md, 2026-11-01.
+_SUSPICIOUSLY_FAST_CHARS_PER_SECOND = 14
+_SUSPICIOUSLY_FAST_MIN_ANSWER_LENGTH = 200
+_INSTANT_SUBMIT_MIN_ANSWER_LENGTH = 50
+
+
+def _detect_suspected_ai(
+    answer: str, time_taken_seconds: int | None, large_paste_detected: bool
+) -> tuple[bool, str | None]:
+    """Returns (suspected, reasons). Two signals, combined:
+    1. The answer is long but was typed faster than a human plausibly
+       types sustained prose/code (chars/second over a length threshold, so
+       a short quick answer doesn't trip it).
+    2. A single paste event inserted a large chunk of the final answer —
+       reported by the client, see schemas/duel.py."""
+    reasons: list[str] = []
+
+    if time_taken_seconds is not None and len(answer) >= _INSTANT_SUBMIT_MIN_ANSWER_LENGTH:
+        if time_taken_seconds <= 0:
+            reasons.append("submitted instantly for a non-trivial answer length")
+        elif (
+            len(answer) >= _SUSPICIOUSLY_FAST_MIN_ANSWER_LENGTH
+            and len(answer) / time_taken_seconds > _SUSPICIOUSLY_FAST_CHARS_PER_SECOND
+        ):
+            reasons.append("answer length vs. time taken is far faster than typical typing speed")
+
+    if large_paste_detected:
+        reasons.append("a large chunk of the answer was pasted in a single action")
+
+    return (len(reasons) > 0, "; ".join(reasons) if reasons else None)
+
+
 def submit_human_entry(
     db: Session,
     *,
@@ -141,6 +176,7 @@ def submit_human_entry(
     answer: str,
     time_taken_seconds: int | None = None,
     declared_ai_tools: str | None = None,
+    large_paste_detected: bool = False,
 ) -> DuelEntry:
     """A signed-in human joins an open crowd duel with their own answer —
     "Can you beat the AI?" Judged on the exact same blind-vote ladder as
@@ -162,6 +198,9 @@ def submit_human_entry(
             status.HTTP_409_CONFLICT, "Can't enter a duel one of your own agents created."
         )
 
+    suspected_ai, suspected_ai_reasons = _detect_suspected_ai(
+        answer, time_taken_seconds, large_paste_detected
+    )
     entry = DuelEntry(
         duel_id=duel.id,
         human_owner_id=owner.id,
@@ -169,6 +208,9 @@ def submit_human_entry(
         answer=answer,
         human_time_taken_seconds=time_taken_seconds,
         human_declared_ai_tools=declared_ai_tools,
+        human_large_paste_detected=large_paste_detected,
+        human_suspected_ai=suspected_ai,
+        human_suspected_ai_reasons=suspected_ai_reasons,
     )
     db.add(entry)
     duel.status = "judging"

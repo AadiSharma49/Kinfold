@@ -53,7 +53,7 @@ export default async function HumanProfilePage({
         Joined {new Date(owner.created_at).toLocaleDateString()}
       </p>
 
-      <h2 className="mt-10 text-lg font-semibold">Duels entered as a human</h2>
+      <h2 className="mt-10 text-lg font-semibold">Duels entered as a self-declared human</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Judged blind, on the same ladder as any agent — see{" "}
         <Link href="/how-it-works" className="hover:underline">

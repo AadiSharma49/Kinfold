@@ -142,3 +142,83 @@ def test_human_receipt_is_blind_until_resolved_then_revealed(client):
     human_entry_revealed = next(e for e in resolved["entries"] if e["id"] == entry["id"])
     assert human_entry_revealed["human_time_taken_seconds"] == 95
     assert human_entry_revealed["human_declared_ai_tools"] == "Used a spell-checker, nothing else."
+
+
+def test_fast_long_answer_is_flagged_suspected_ai(client):
+    _, owner_a_key = signup_owner(client, "owner_human_fast_a")
+    _, owner_b_key = signup_owner(client, "owner_human_fast_b")
+    _, agent_a_key = create_agent(client, owner_a_key, "human_fast_agent_a")
+
+    duel = create_duel(client, agent_a_key, category="debate", answer="AI's answer")
+    long_answer = "word " * 100  # 500 chars
+    submit_response = client.post(
+        f"/v1/duels/{duel['id']}/human-entry",
+        json={"answer": long_answer, "time_taken_seconds": 2, "large_paste_detected": False},
+        headers={"Authorization": f"Bearer {owner_b_key}"},
+    )
+    entry = submit_response.json()
+
+    min_votes = get_settings().KINFOLD_MIN_VOTES_TO_RESOLVE
+    for i in range(min_votes):
+        _, voter_key = signup_owner(client, f"owner_human_fast_voter_{i}")
+        client.post(
+            f"/v1/duels/{duel['id']}/vote",
+            json={"entry_id": entry["id"]},
+            headers={"Authorization": f"Bearer {voter_key}"},
+        )
+
+    resolved = client.get(f"/v1/duels/{duel['id']}").json()
+    revealed = next(e for e in resolved["entries"] if e["id"] == entry["id"])
+    assert revealed["human_suspected_ai"] is True
+    assert "faster than typical typing speed" in revealed["human_suspected_ai_reasons"]
+
+
+def test_large_paste_is_flagged_suspected_ai(client):
+    _, owner_a_key = signup_owner(client, "owner_human_paste_a")
+    _, owner_b_key = signup_owner(client, "owner_human_paste_b")
+    _, agent_a_key = create_agent(client, owner_a_key, "human_paste_agent_a")
+
+    duel = create_duel(client, agent_a_key, category="debate", answer="AI's answer")
+    submit_response = client.post(
+        f"/v1/duels/{duel['id']}/human-entry",
+        json={"answer": "short", "time_taken_seconds": 60, "large_paste_detected": True},
+        headers={"Authorization": f"Bearer {owner_b_key}"},
+    )
+    entry = submit_response.json()
+
+    min_votes = get_settings().KINFOLD_MIN_VOTES_TO_RESOLVE
+    for i in range(min_votes):
+        _, voter_key = signup_owner(client, f"owner_human_paste_voter_{i}")
+        client.post(
+            f"/v1/duels/{duel['id']}/vote",
+            json={"entry_id": entry["id"]},
+            headers={"Authorization": f"Bearer {voter_key}"},
+        )
+
+    resolved = client.get(f"/v1/duels/{duel['id']}").json()
+    revealed = next(e for e in resolved["entries"] if e["id"] == entry["id"])
+    assert revealed["human_suspected_ai"] is True
+    assert "pasted in a single action" in revealed["human_suspected_ai_reasons"]
+
+
+def test_normal_paced_human_entry_is_not_flagged(client):
+    _, owner_a_key = signup_owner(client, "owner_human_normal_a")
+    _, owner_b_key = signup_owner(client, "owner_human_normal_b")
+    _, agent_a_key = create_agent(client, owner_a_key, "human_normal_agent_a")
+
+    duel = create_duel(client, agent_a_key, category="debate", answer="AI's answer")
+    entry = submit_human_entry(client, owner_b_key, duel["id"], "A normal human answer.").json()
+
+    min_votes = get_settings().KINFOLD_MIN_VOTES_TO_RESOLVE
+    for i in range(min_votes):
+        _, voter_key = signup_owner(client, f"owner_human_normal_voter_{i}")
+        client.post(
+            f"/v1/duels/{duel['id']}/vote",
+            json={"entry_id": entry["id"]},
+            headers={"Authorization": f"Bearer {voter_key}"},
+        )
+
+    resolved = client.get(f"/v1/duels/{duel['id']}").json()
+    revealed = next(e for e in resolved["entries"] if e["id"] == entry["id"])
+    assert revealed["human_suspected_ai"] is False
+    assert revealed["human_suspected_ai_reasons"] is None

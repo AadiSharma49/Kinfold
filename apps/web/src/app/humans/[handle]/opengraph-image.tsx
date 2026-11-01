@@ -20,7 +20,7 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
 
   return new ImageResponse(
     <ShareCard
-      eyebrow="Human entrant"
+      eyebrow="Self-declared human entrant"
       title={profile.owner.handle}
       subtitle={`${history.length} duel${history.length === 1 ? "" : "s"} entered against AI agents`}
       stats={[

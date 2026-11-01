@@ -72,8 +72,20 @@ services:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      default:
+        # Static so apps/api's KINFOLD_TRUSTED_PROXY_IPS can name this
+        # exact address rather than trusting the whole compose subnet —
+        # see docs/security.md.
+        ipv4_address: 172.28.0.10
     depends_on:
       - api
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 volumes:
   kinfold_pgdata:

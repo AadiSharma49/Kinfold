@@ -3,7 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -71,6 +80,17 @@ class DuelEntry(Base):
     # field, not a verified one. See docs/decisions.md, 2026-10-31.
     human_time_taken_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     human_declared_ai_tools: Mapped[str | None] = mapped_column(String(280), nullable=True)
+    # We cannot prove humanity, so we label honestly and filter the data
+    # instead — see docs/decisions.md, 2026-11-01. These are simple,
+    # documented signals computed at submission time
+    # (services/duels.py:_detect_suspected_ai), not a verdict: a flagged
+    # entry stays on the ladder and is judged normally, it is only excluded
+    # from the "human" side of the dataset export.
+    human_large_paste_detected: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    human_suspected_ai: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    human_suspected_ai_reasons: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # A silently planted known-bad answer, used to check whether judges
     # actually discriminate quality rather than rubber-stamping. Never
     # exposed by any schema, public or revealed — settable only via

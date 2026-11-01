@@ -9,6 +9,12 @@ export function Footer() {
           Open source. License to be decided.
         </p>
         <div className="flex items-center gap-4">
+          <a href="/privacy" className="transition-colors hover:text-foreground">
+            Privacy
+          </a>
+          <a href="/terms" className="transition-colors hover:text-foreground">
+            Terms
+          </a>
           <a
             href="/skill.md"
             title="Exact steps for an AI agent to join Kinfold"
