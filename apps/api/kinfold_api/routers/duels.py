@@ -11,6 +11,7 @@ from kinfold_api.db import get_db
 from kinfold_api.deps import require_agent_key, require_any_key, require_owner_key
 from kinfold_api.models import Agent, ApiKey, Duel, DuelEntry, Owner, Vote
 from kinfold_api.schemas.duel import (
+    BugListingCreateRequest,
     DuelCreateRequest,
     DuelDetailOut,
     DuelEntryOut,
@@ -27,6 +28,7 @@ from kinfold_api.schemas.judgment import (
 from kinfold_api.services.duels import (
     AgentInfo,
     agent_info_lookup,
+    create_bug_listing,
     create_duel,
     owner_handle_lookup,
     submit_entry,
@@ -51,6 +53,25 @@ def _get_duel_or_404(db: Session, duel_id: uuid.UUID) -> Duel:
 
 
 _REMOVED_ANSWER_NOTICE = "[removed by moderator]"
+
+
+def _duel_out(duel: Duel, creator_handle: str | None = None) -> DuelOut:
+    """Not model_validate(duel) — created_by_human_owner_handle isn't a
+    column on Duel, it's resolved via owner_handle_lookup by the caller.
+    Not blind: the lister never submits an entry, so there's no judging
+    concern with showing it immediately."""
+    return DuelOut(
+        id=duel.id,
+        category=duel.category,
+        status=duel.status,
+        prompt=duel.prompt,
+        created_at=duel.created_at,
+        resolved_at=duel.resolved_at,
+        winner_agent_id=duel.winner_agent_id,
+        winner_human_owner_id=duel.winner_human_owner_id,
+        is_draw=duel.is_draw,
+        created_by_human_owner_handle=creator_handle,
+    )
 
 
 def _entry_out(
@@ -103,7 +124,24 @@ def create_duel_route(
         answer=body.answer,
         tests=tests,
     )
-    return DuelOut.model_validate(duel)
+    return _duel_out(duel)
+
+
+@router.post("/listings", response_model=DuelOut, status_code=status.HTTP_201_CREATED)
+def create_bug_listing_route(
+    body: BugListingCreateRequest,
+    key: ApiKey = Depends(require_owner_key),
+    db: Session = Depends(get_db),
+) -> DuelOut:
+    """"Bring a bug" — see docs/listings.md. A human lists a real bug;
+    agents fix it via the usual POST /v1/duels/{id}/entries."""
+    owner = db.get(Owner, key.owner_id)
+    if owner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    tests = [(t.input, t.expected_output) for t in body.tests]
+    duel = create_bug_listing(db, owner=owner, prompt=body.prompt, tests=tests)
+    return _duel_out(duel, creator_handle=owner.handle)
 
 
 @router.get("/duels", response_model=list[DuelOut])
@@ -123,7 +161,11 @@ def list_duels(
         query = query.where(Duel.category == category)
 
     duels = db.execute(query).scalars().all()
-    return [DuelOut.model_validate(d) for d in duels]
+    creator_handles = owner_handle_lookup(db, [d.created_by_human_owner_id for d in duels])
+    return [
+        _duel_out(d, creator_handle=creator_handles.get(d.created_by_human_owner_id))
+        for d in duels
+    ]
 
 
 @router.get("/duels/{duel_id}", response_model=DuelDetailOut)
@@ -136,15 +178,20 @@ def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut
     )
     reveal = duel.status == "resolved"
     infos = agent_info_lookup(db, [e.agent_id for e in entries]) if reveal else {}
-    owner_handles = owner_handle_lookup(db, [e.human_owner_id for e in entries]) if reveal else {}
+    owner_handles = owner_handle_lookup(
+        db, [e.human_owner_id for e in entries] + [duel.created_by_human_owner_id]
+    )
+    entry_owner_handles = owner_handles if reveal else {}
 
     votes_cast = db.execute(
         select(func.count()).select_from(Vote).where(Vote.duel_id == duel.id)
     ).scalar_one()
 
     return DuelDetailOut(
-        **DuelOut.model_validate(duel).model_dump(),
-        entries=[_entry_out(e, duel, infos, owner_handles) for e in entries],
+        **_duel_out(
+            duel, creator_handle=owner_handles.get(duel.created_by_human_owner_id)
+        ).model_dump(),
+        entries=[_entry_out(e, duel, infos, entry_owner_handles) for e in entries],
         votes_cast=votes_cast,
     )
 

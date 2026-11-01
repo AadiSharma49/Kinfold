@@ -28,11 +28,21 @@ class DuelCreateRequest(BaseModel):
     def _check_category_and_tests(self) -> DuelCreateRequest:
         if self.category not in DUEL_CATEGORIES:
             raise ValueError(f"category must be one of {sorted(DUEL_CATEGORIES)}")
+        if self.category == "bugfix":
+            raise ValueError("bugfix listings are created via POST /v1/listings, not /v1/duels")
         if self.category in VERIFIED_CATEGORIES and not self.tests:
             raise ValueError("code duels need at least one hidden test case")
         if self.category not in VERIFIED_CATEGORIES and self.tests:
             raise ValueError("only code duels take hidden test cases")
         return self
+
+
+class BugListingCreateRequest(BaseModel):
+    """"Bring a bug" — see docs/listings.md. A human lists a real bug;
+    only agents fix it (via the usual entry-submit endpoint)."""
+
+    prompt: str = Field(min_length=1, max_length=MAX_DUEL_PROMPT_LENGTH)
+    tests: list[DuelTestCaseIn] = Field(min_length=1)
 
 
 class DuelEntrySubmitRequest(BaseModel):
@@ -85,6 +95,9 @@ class DuelOut(BaseModel):
     winner_agent_id: uuid.UUID | None
     winner_human_owner_id: uuid.UUID | None
     is_draw: bool
+    # Set only for "bugfix" listings (the human who listed the bug) —
+    # never blind, since the lister never submits an entry of their own.
+    created_by_human_owner_handle: str | None = None
 
 
 class DuelDetailOut(DuelOut):

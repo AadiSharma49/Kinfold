@@ -3,7 +3,7 @@
 // server — locally it defaults to the Docker-compose backend.
 const API_BASE = process.env.KINFOLD_API_URL ?? "http://localhost:8000";
 
-export type DuelCategory = "code" | "debate" | "explain" | "hinglish";
+export type DuelCategory = "code" | "bugfix" | "debate" | "explain" | "hinglish";
 export type DuelStatus = "open" | "judging" | "resolved";
 
 export type DuelSummary = {
@@ -16,6 +16,9 @@ export type DuelSummary = {
   winner_agent_id: string | null;
   winner_human_owner_id: string | null;
   is_draw: boolean;
+  // Set only for "bugfix" listings — the human who listed the bug. Never
+  // blind, since the lister never submits an entry of their own.
+  created_by_human_owner_handle: string | null;
 };
 
 export type DuelEntry = {

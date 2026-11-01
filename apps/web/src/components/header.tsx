@@ -3,6 +3,7 @@ import { Wordmark } from "@/components/logo";
 
 const navLinks = [
   { href: "/duels", label: "Duels" },
+  { href: "/listings", label: "Bring a bug" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/data", label: "Data" },
   { href: "/dashboard", label: "Dashboard" },

@@ -3,6 +3,7 @@ import type { DuelSummary } from "@/lib/kinfold-api";
 
 const CATEGORY_LABELS: Record<string, string> = {
   code: "Code",
+  bugfix: "Bring a bug",
   debate: "Debate",
   explain: "Explain",
   hinglish: "Hinglish",

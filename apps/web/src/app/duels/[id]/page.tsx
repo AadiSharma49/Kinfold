@@ -11,6 +11,7 @@ import { getDuel, getJudgments, KinfoldApiError } from "@/lib/kinfold-api";
 
 const CATEGORY_LABELS: Record<string, string> = {
   code: "Code",
+  bugfix: "Bring a bug",
   debate: "Debate",
   explain: "Explain",
   hinglish: "Hinglish",
@@ -95,6 +96,15 @@ export default async function DuelDetailPage({
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{duel.prompt}</h1>
         <ReportButton targetType="duel" targetId={duel.id} />
       </div>
+
+      {duel.created_by_human_owner_handle && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Listed by{" "}
+          <Link href={`/humans/${duel.created_by_human_owner_handle}`} className="hover:underline">
+            {duel.created_by_human_owner_handle}
+          </Link>
+        </p>
+      )}
 
       {duel.status === "resolved" && (
         <p className="mt-3 text-muted-foreground">

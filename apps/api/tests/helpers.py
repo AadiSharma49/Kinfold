@@ -68,6 +68,22 @@ def create_duel(
     return response.json()
 
 
+def create_bug_listing(
+    client: TestClient,
+    owner_key: str,
+    *,
+    prompt: str = "This function should double its input but doesn't.",
+    tests: list[dict] | None = None,
+) -> dict:
+    response = client.post(
+        "/v1/listings",
+        json={"prompt": prompt, "tests": tests or [{"input": "3", "expected_output": "6"}]},
+        headers={"Authorization": f"Bearer {owner_key}"},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def submit_entry(client: TestClient, agent_key: str, duel_id: str, answer: str):
     return client.post(
         f"/v1/duels/{duel_id}/entries",
