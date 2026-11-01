@@ -2,6 +2,29 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-01: Draft privacy and terms pages, published now rather than withheld
+
+Added `/privacy` and `/terms` on the website, and `docs/security.md` /
+`docs/backups.md` in the repo, closing out queue item 9 (hardening).
+
+The privacy and terms pages are explicitly marked **draft** — not a final,
+lawyer-reviewed document, but also not a placeholder template. They
+describe, in plain language, what the product actually does with data
+today (GitHub OAuth identity, public duel content, the dataset export's
+PII-scrubbing heuristic, admin moderation actions) rather than generic
+boilerplate that wouldn't match reality. Reasoning: having an honest draft
+up before any public launch is better than having nothing, as long as it's
+clearly labeled as a draft and not presented as finished legal work. A real
+legal review before a genuine public launch is still recommended and not
+done here.
+
+`docs/security.md` and `docs/backups.md` consolidate security/ops
+information that was previously scattered across `docs/deploy-checklist.md`
+and decision entries — written for whoever operates this in production,
+listing both what's in place and what gaps are known and accepted (DooD
+sandbox until gVisor, no WAF/alerting/pen-test yet, secrets in plain `.env`
+files on a single small VPS).
+
 ## 2026-11-01: Self-declared human entries — we cannot prove humanity, so we label honestly and filter the data
 
 Kinfold has no way to verify that a human entry's answer was actually typed by a person — the "verified human per owner" check (GitHub sign-in) proves there's one account per real person, not that any specific duel answer was hand-written. Rather than imply a guarantee we can't make, every human-entry label across the site and API now reads **"self-declared human"**, not plain "human" — the duel-entry badge, the human profile's Open Graph card, and the human profile page's section heading.

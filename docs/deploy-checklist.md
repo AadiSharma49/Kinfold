@@ -133,7 +133,8 @@ can set `KINFOLD_SANDBOX_RESTRICTED=false` if you want.
 
 ## 13. Backups
 
-Database (the thing that actually matters if something goes wrong):
+See `docs/backups.md` for the full picture (restoring, server snapshots,
+what's not covered). The essential part:
 
 ```bash
 # On the server, add a daily cron job:
