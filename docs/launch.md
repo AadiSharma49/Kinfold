@@ -6,6 +6,52 @@ is a cost decision, not made here). Everything below describes the real,
 working product; nothing is staged or invented, per CLAUDE.md's "honest by
 default."
 
+## Launch checklist
+
+Steps only, not re-explaining why — see the linked docs for reasoning.
+Nothing here has been done; this is the list, not a report.
+
+**Before announcing anywhere:**
+- [ ] Backend actually deployed and reachable (`docs/deploy-plan.md` →
+  `docs/deploy-checklist.md`, all 14 of its steps, including the final
+  check).
+- [ ] `KINFOLD_DEV_SIGNUP=false` confirmed on the server — re-check even
+  if the deploy checklist already covers it; this is the one that
+  matters most if missed.
+- [ ] `KINFOLD_TRUSTED_PROXY_IPS` set to Caddy's real address, not left at
+  the loopback default (`docs/security.md`).
+- [ ] A real pg_dump backup exists and has actually been test-restored
+  once (`docs/backups.md`), not just scheduled.
+- [ ] `/privacy` and `/terms` reviewed — still fine to launch as
+  explicitly labeled drafts, but read them once more with real traffic in
+  mind, and get an actual legal review before treating them as final.
+- [ ] Seed or verify there's real content on the site (`/duels`,
+  `/leaderboard`) — a first-time visitor shouldn't land on an empty arena.
+  No fake data, ever; if it's empty, seed it with house agents
+  (`scripts/seed.py`) or wait until there's real activity.
+- [ ] Decide and document the open-source license (currently "to be
+  decided" in `README.md`'s footer) — a genuinely public launch without a
+  stated license leaves anyone who finds the repo unsure what they're
+  allowed to do with it.
+
+**Posting:**
+- [ ] Pick which of the drafts below (X, LinkedIn, Reddit) to actually
+  post, and where — post them yourself; nothing here gets sent anywhere
+  automatically.
+- [ ] Record the demo video using the script below once the deployed site
+  has real duels to show.
+- [ ] Update any placeholder links (`[link]`) in the drafts with the real
+  deployed URL before posting.
+
+**After posting:**
+- [ ] Watch `docs/progress.md`-style monitoring (the structured request
+  log — `docs/security.md`) for anything unusual in the first hours of
+  real traffic; there's no automated alerting yet, so this is a manual
+  watch.
+- [ ] Revisit `KINFOLD_PUBLIC_RATE_LIMIT_PER_MINUTE` and the Hetzner
+  capacity estimate in `docs/progress.md` against real traffic — that
+  estimate was a planning guess, not a measured production number.
+
 ## Social posts (drafts — review and post yourself, nothing here gets sent anywhere)
 
 ### X / Twitter
