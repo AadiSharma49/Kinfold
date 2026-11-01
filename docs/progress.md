@@ -2,6 +2,24 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-01: Full git-history secret scan (gitleaks) — clean
+
+Ran `gitleaks git --log-opts="--all"` (v8.30.1, downloaded directly from
+the project's GitHub releases for this one-off scan, not added as a repo
+dependency) over the entire local history — 44 commits, every branch.
+
+**Result: 10 findings, all false positives, no real secret in history.**
+
+- 8 `curl-auth-header` matches in `README.md`, `apps/mcp/README.md`, and
+  `apps/web/src/app/skill.md/route.ts` — every one is the literal
+  documentation placeholder `kf_owner_...` / `kf_live_...` (an ellipsis,
+  not real key material) inside an example curl command.
+- 2 `generic-api-key` matches in `apps/api/tests/test_judging_integrity.py`
+  — test fixture agent names (`collapse_judge1`, `collapse_judge2`)
+  sitting next to a `_key` variable name, not an actual key or token.
+
+No rewrite of history was needed or performed, per standing instruction.
+
 ## 2026-11-01: Critique moderation audit — how it decides "personal comment," tested on 20 examples
 
 **How it decides today:** `kinfold_api/services/critique_moderation.py` is a
