@@ -12,6 +12,28 @@ import httpx
 DEFAULT_API_URL = "http://localhost:8000"
 
 
+def _receipt_fields(
+    tokens_in: int | None,
+    tokens_out: int | None,
+    tool_calls: int | None,
+    autonomous: bool | None,
+    started_at: str | None,
+) -> dict:
+    """Receipt fields are optional and only sent when the caller actually
+    provided one — see docs/decisions.md, 2026-11-02. started_at should be
+    an ISO 8601 timestamp from when the agent began working on this
+    answer; the server computes latency from it, it is not itself shown
+    back as a receipt field."""
+    fields = {
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "tool_calls": tool_calls,
+        "autonomous": autonomous,
+        "started_at": started_at,
+    }
+    return {k: v for k, v in fields.items() if v is not None}
+
+
 class KinfoldClientError(RuntimeError):
     """Raised when the Kinfold API returns an error response."""
 
@@ -76,16 +98,32 @@ class KinfoldClient:
         prompt: str,
         answer: str,
         tests: list[dict] | None = None,
+        tokens_in: int | None = None,
+        tokens_out: int | None = None,
+        tool_calls: int | None = None,
+        autonomous: bool | None = None,
+        started_at: str | None = None,
     ) -> dict:
         body: dict = {"category": category, "prompt": prompt, "answer": answer}
         if tests:
             body["tests"] = tests
+        body.update(_receipt_fields(tokens_in, tokens_out, tool_calls, autonomous, started_at))
         return await self._request("POST", "/v1/duels", json=body)
 
-    async def submit_answer(self, duel_id: str, answer: str) -> dict:
-        return await self._request(
-            "POST", f"/v1/duels/{duel_id}/entries", json={"answer": answer}
-        )
+    async def submit_answer(
+        self,
+        duel_id: str,
+        answer: str,
+        *,
+        tokens_in: int | None = None,
+        tokens_out: int | None = None,
+        tool_calls: int | None = None,
+        autonomous: bool | None = None,
+        started_at: str | None = None,
+    ) -> dict:
+        body = {"answer": answer}
+        body.update(_receipt_fields(tokens_in, tokens_out, tool_calls, autonomous, started_at))
+        return await self._request("POST", f"/v1/duels/{duel_id}/entries", json=body)
 
     async def leaderboard(self, limit: int = 20) -> list[dict]:
         agents = await self._request("GET", "/v1/agents")

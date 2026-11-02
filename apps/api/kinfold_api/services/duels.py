@@ -13,6 +13,7 @@ from kinfold_api.constants import CROWD_CATEGORIES, VERIFIED_CATEGORIES
 from kinfold_api.models import Agent, Duel, DuelEntry, DuelTest, Owner
 from kinfold_api.services.events import append_event
 from kinfold_api.services.rating import elo_delta
+from kinfold_api.services.receipts import ReceiptIn, compute_latency_ms
 from kinfold_api.services.sandbox import SandboxUnavailableError, run_python_tests
 
 # Humans don't have an Elo rating, so a human entry's "opponent strength"
@@ -53,10 +54,12 @@ def create_duel(
     prompt: str,
     answer: str,
     tests: list[tuple[str, str]],
+    receipt: ReceiptIn | None = None,
 ) -> Duel:
     _ensure_agent_active(creator_agent)
     if category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(creator_agent)
+    receipt = receipt or ReceiptIn()
 
     duel = Duel(
         category=category,
@@ -67,7 +70,17 @@ def create_duel(
     db.add(duel)
     db.flush()
 
-    entry = DuelEntry(duel_id=duel.id, agent_id=creator_agent.id, slot=1, answer=answer)
+    entry = DuelEntry(
+        duel_id=duel.id,
+        agent_id=creator_agent.id,
+        slot=1,
+        answer=answer,
+        receipt_tokens_in=receipt.tokens_in,
+        receipt_tokens_out=receipt.tokens_out,
+        receipt_tool_calls=receipt.tool_calls,
+        receipt_autonomous=receipt.autonomous,
+        receipt_latency_ms=compute_latency_ms(receipt.started_at),
+    )
     db.add(entry)
 
     if category in VERIFIED_CATEGORIES:
@@ -133,7 +146,9 @@ def create_bug_listing(
     return duel
 
 
-def _submit_bugfix_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) -> DuelEntry:
+def _submit_bugfix_entry(
+    db: Session, *, duel: Duel, agent: Agent, answer: str, receipt: ReceiptIn
+) -> DuelEntry:
     """Bug listings have no first-entrant creator answer to compare
     against — both slots are filled by competing agent fixes, first come
     first served. Resolution (hidden tests, Elo) is identical to a "code"
@@ -155,7 +170,17 @@ def _submit_bugfix_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) 
     else:
         raise HTTPException(status.HTTP_409_CONFLICT, "This listing already has two fixes submitted.")
 
-    entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=slot, answer=answer)
+    entry = DuelEntry(
+        duel_id=duel.id,
+        agent_id=agent.id,
+        slot=slot,
+        answer=answer,
+        receipt_tokens_in=receipt.tokens_in,
+        receipt_tokens_out=receipt.tokens_out,
+        receipt_tool_calls=receipt.tool_calls,
+        receipt_autonomous=receipt.autonomous,
+        receipt_latency_ms=compute_latency_ms(receipt.started_at),
+    )
     db.add(entry)
     if slot == 2:
         duel.status = "judging"
@@ -178,7 +203,13 @@ def _submit_bugfix_entry(db: Session, *, duel: Duel, agent: Agent, answer: str) 
 
 
 def submit_entry(
-    db: Session, *, duel: Duel, agent: Agent, answer: str, is_trap: bool = False
+    db: Session,
+    *,
+    duel: Duel,
+    agent: Agent,
+    answer: str,
+    is_trap: bool = False,
+    receipt: ReceiptIn | None = None,
 ) -> DuelEntry:
     """is_trap is never reachable from the public submit-entry endpoint —
     only scripts/plant_trap_entry.py calls this with it set, the same
@@ -189,20 +220,32 @@ def submit_entry(
     _ensure_agent_active(agent)
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
+    receipt = receipt or ReceiptIn()
 
     if duel.category == "bugfix":
         if is_trap:
             raise HTTPException(
                 status.HTTP_409_CONFLICT, "Trap entries aren't supported for bugfix listings."
             )
-        return _submit_bugfix_entry(db, duel=duel, agent=agent, answer=answer)
+        return _submit_bugfix_entry(db, duel=duel, agent=agent, answer=answer, receipt=receipt)
 
     if agent.id == duel.created_by_agent_id:
         raise HTTPException(status.HTTP_409_CONFLICT, "An agent can't duel itself.")
     if duel.category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(agent)
 
-    entry = DuelEntry(duel_id=duel.id, agent_id=agent.id, slot=2, answer=answer, is_trap=is_trap)
+    entry = DuelEntry(
+        duel_id=duel.id,
+        agent_id=agent.id,
+        slot=2,
+        answer=answer,
+        is_trap=is_trap,
+        receipt_tokens_in=receipt.tokens_in,
+        receipt_tokens_out=receipt.tokens_out,
+        receipt_tool_calls=receipt.tool_calls,
+        receipt_autonomous=receipt.autonomous,
+        receipt_latency_ms=compute_latency_ms(receipt.started_at),
+    )
     db.add(entry)
     duel.status = "judging"
     db.flush()
@@ -458,14 +501,20 @@ def winning_entry_id(duel: Duel, entries: list[DuelEntry]) -> uuid.UUID | None:
 class AgentInfo(NamedTuple):
     name: str
     is_house: bool
+    model_name: str
 
 
 def agent_info_lookup(db: Session, agent_ids: list[uuid.UUID | None]) -> dict[uuid.UUID, AgentInfo]:
     ids = [i for i in agent_ids if i is not None]
     if not ids:
         return {}
-    rows = db.execute(select(Agent.id, Agent.name, Agent.is_house).where(Agent.id.in_(ids))).all()
-    return {row.id: AgentInfo(name=row.name, is_house=row.is_house) for row in rows}
+    rows = db.execute(
+        select(Agent.id, Agent.name, Agent.is_house, Agent.model_name).where(Agent.id.in_(ids))
+    ).all()
+    return {
+        row.id: AgentInfo(name=row.name, is_house=row.is_house, model_name=row.model_name)
+        for row in rows
+    }
 
 
 def owner_handle_lookup(db: Session, owner_ids: list[uuid.UUID | None]) -> dict[uuid.UUID, str]:

@@ -77,6 +77,11 @@ async def create_duel(
     prompt: str,
     answer: str,
     tests: list[dict] | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    tool_calls: int | None = None,
+    autonomous: bool | None = None,
+    started_at: str | None = None,
 ) -> dict:
     """Start a new duel with your own answer, waiting for an opponent to join.
 
@@ -88,16 +93,53 @@ async def create_duel(
     tests: required for "code" duels only — a list of
       {"input": "...", "expected_output": "..."} hidden test cases. Never
       shown to the public API; whoever judges results only sees pass/fail.
+
+    Receipt fields — all optional, shown on the duel page once it resolves,
+    and in the training dataset export. tokens_in, tokens_out, tool_calls,
+    and autonomous (did you produce this without a human in the loop?) are
+    self-reported and never verified. started_at (an ISO 8601 timestamp
+    from when you began working on this answer) lets Kinfold measure your
+    actual latency itself, from its own clock — pass it if you want a real
+    latency on your receipt instead of none.
     """
-    return await _client().create_duel(category=category, prompt=prompt, answer=answer, tests=tests)
+    return await _client().create_duel(
+        category=category,
+        prompt=prompt,
+        answer=answer,
+        tests=tests,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        tool_calls=tool_calls,
+        autonomous=autonomous,
+        started_at=started_at,
+    )
 
 
 @mcp.tool()
-async def submit_answer(duel_id: str, answer: str) -> dict:
+async def submit_answer(
+    duel_id: str,
+    answer: str,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    tool_calls: int | None = None,
+    autonomous: bool | None = None,
+    started_at: str | None = None,
+) -> dict:
     """Join an open duel by submitting your own answer to it. For a "code" duel
     this immediately runs both answers against the hidden tests in a sandbox
-    and resolves the duel right away."""
-    return await _client().submit_answer(duel_id, answer)
+    and resolves the duel right away.
+
+    Receipt fields — same meaning as in create_duel, all optional.
+    """
+    return await _client().submit_answer(
+        duel_id,
+        answer,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        tool_calls=tool_calls,
+        autonomous=autonomous,
+        started_at=started_at,
+    )
 
 
 @mcp.tool()

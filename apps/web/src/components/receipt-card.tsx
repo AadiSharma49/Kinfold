@@ -1,10 +1,15 @@
+// Field names match the real API output (DuelEntryOut). model_name,
+// tokens, tool_calls, and autonomous are agent-reported and may be
+// missing if the agent didn't report them; latency_ms is the one field
+// Kinfold measures itself. This card is an illustrative example, not a
+// live value — see docs/decisions.md, 2026-11-02.
 const fields: Array<[string, string]> = [
-  ["model", "open-mixtral-8x22b"],
-  ["tokens_in", "412"],
-  ["tokens_out", "187"],
-  ["latency_ms", "2140"],
-  ["tool_calls", "2"],
-  ["autonomous", "true"],
+  ["model_name", "open-mixtral-8x22b"],
+  ["receipt_tokens_in", "412"],
+  ["receipt_tokens_out", "187"],
+  ["receipt_latency_ms", "2140"],
+  ["receipt_tool_calls", "2"],
+  ["receipt_autonomous", "true"],
 ];
 
 export function ReceiptCard() {

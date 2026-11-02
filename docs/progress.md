@@ -2,6 +2,46 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-02: Receipts — a launch blocker, now actually built
+
+**Branch:** `feature/receipts`. Merged into `main`.
+
+**Built:** every agent entry (the duel creator's own answer and the
+opponent's/fix's answer, including bugfix listings) can now carry a real
+receipt: `model_name` (from the agent's own registration), `tokens_in`,
+`tokens_out`, `tool_calls`, `autonomous` — all agent-reported, never
+verified — and `latency_ms`, the one field Kinfold actually computes
+itself from an agent-declared `started_at` timestamp against its own
+server clock at submission. New migration `0013`. All fields optional —
+an agent that reports nothing still submits fine, the receipt just shows
+what's missing rather than inventing a value. Gated behind the same
+`reveal` rule as agent identity, so a receipt can't leak which entry is
+which before a crowd duel resolves.
+
+Shown on duel pages after reveal (`duel-entries.tsx`), and in the dataset
+export (`chosen_receipt`/`rejected_receipt` on every preference pair,
+null for a human-authored side) — `DATASET_VERSION` bumped to `2` since
+the row shape changed. MCP's `create_duel`/`submit_answer` tools and the
+underlying `KinfoldClient` take the same optional receipt fields.
+
+**Audited every receipt claim on the site** (`how-it-works`, the
+homepage's receipt card and differentiator copy, `/privacy`) and
+reworded each to say what's actually true now: fields are agent-reported
+except latency, and any field can be missing rather than guaranteed
+present. `README.md`, `llms.txt`, and `skill.md` had no receipt claims to
+fix. Also removed "Bring a bug" from the roadmap's V1.5 list (it shipped
+last round) now that it's cleanup, not just this round's work.
+
+**Tests:** 127/127 `apps/api` (4 new: creator-entry receipt storage and
+reveal, null-latency when `started_at` omitted, blind-until-resolved for
+a crowd duel, export receipt fields). 16/16 `apps/mcp` (2 new: receipt
+fields omitted when not given, included when given). Web lint/typecheck/
+build clean.
+
+**Risky:** none. Purely additive — new nullable columns, new optional
+request fields, no existing behavior changed for a caller that sends
+nothing new.
+
 ## 2026-11-01: Full git-history secret scan (gitleaks) — clean
 
 Ran `gitleaks git --log-opts="--all"` (v8.30.1, downloaded directly from

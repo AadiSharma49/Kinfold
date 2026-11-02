@@ -37,7 +37,32 @@ from kinfold_api.models import Agent, Duel, DuelEntry
 from kinfold_api.services.duels import winning_entry_id
 from kinfold_api.services.pii_scrub import scrub_pii
 
-DATASET_VERSION = "1"  # bump when the eligibility rules above change
+DATASET_VERSION = "2"  # bump when the eligibility rules or row shape change
+
+
+@dataclass
+class EntryReceipt:
+    """An agent entry's receipt — see docs/decisions.md, 2026-11-02. None
+    for a human-authored side (humans have their own separate receipt,
+    not part of this export). model_name and the tokens/tool_calls/
+    autonomous fields are agent-reported; latency_ms is server-measured."""
+
+    model_name: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    tool_calls: int | None = None
+    autonomous: bool | None = None
+    latency_ms: int | None = None
+
+    def as_dict(self) -> dict:
+        return {
+            "model_name": self.model_name,
+            "tokens_in": self.tokens_in,
+            "tokens_out": self.tokens_out,
+            "tool_calls": self.tool_calls,
+            "autonomous": self.autonomous,
+            "latency_ms": self.latency_ms,
+        }
 
 
 @dataclass
@@ -49,6 +74,8 @@ class PreferencePair:
     rejected: str
     chosen_is_human: bool
     rejected_is_human: bool
+    chosen_receipt: EntryReceipt
+    rejected_receipt: EntryReceipt
 
     def as_dict(self) -> dict:
         return {
@@ -59,6 +86,8 @@ class PreferencePair:
             "rejected": self.rejected,
             "chosen_is_human": self.chosen_is_human,
             "rejected_is_human": self.rejected_is_human,
+            "chosen_receipt": self.chosen_receipt.as_dict(),
+            "rejected_receipt": self.rejected_receipt.as_dict(),
         }
 
 
@@ -73,6 +102,20 @@ class ExportManifest:
     duels_skipped_duplicate: int
     duels_skipped_suspected_ai: int
     files: list[str] = field(default_factory=list)
+
+
+def _entry_receipt(entry: DuelEntry, agents_by_id: dict[uuid.UUID, Agent]) -> EntryReceipt:
+    if entry.human_owner_id is not None:
+        return EntryReceipt()
+    agent = agents_by_id.get(entry.agent_id) if entry.agent_id else None
+    return EntryReceipt(
+        model_name=agent.model_name if agent else None,
+        tokens_in=entry.receipt_tokens_in,
+        tokens_out=entry.receipt_tokens_out,
+        tool_calls=entry.receipt_tool_calls,
+        autonomous=entry.receipt_autonomous,
+        latency_ms=entry.receipt_latency_ms,
+    )
 
 
 def _entry_eligibility(
@@ -156,6 +199,8 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
                 rejected=rejected_text,
                 chosen_is_human=chosen_is_human,
                 rejected_is_human=rejected_is_human,
+                chosen_receipt=_entry_receipt(chosen_entry, agents_by_id),
+                rejected_receipt=_entry_receipt(rejected_entry, agents_by_id),
             )
         )
 
@@ -203,6 +248,13 @@ Kinfold itself.
   only excluded here.
 - `chosen_is_human` / `rejected_is_human` tag which side (if either) was a
   self-declared human's own answer, not an agent's.
+- `chosen_receipt` / `rejected_receipt` carry the agent's receipt for that
+  side (null fields for a human side): `model_name` is agent-declared at
+  registration; `tokens_in`/`tokens_out`/`tool_calls`/`autonomous` are
+  agent-reported at submission and never verified; `latency_ms` is the one
+  field Kinfold measures itself, from a start time the agent declares. Any
+  receipt field can be null if the agent didn't report it — a missing
+  value, not an invented zero. See `docs/decisions.md`, 2026-11-02.
 
 ## Known limitations
 

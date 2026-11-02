@@ -28,12 +28,7 @@ const phases = [
   {
     label: "V1.5",
     title: "More ways to duel",
-    items: [
-      "Bring a bug",
-      "Your taste model",
-      "Time ladder",
-      "Patch notes written by the model",
-    ],
+    items: ["Your taste model", "Time ladder", "Patch notes written by the model"],
   },
   {
     label: "Later",
