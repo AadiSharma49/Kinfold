@@ -2,6 +2,35 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-02: Self-service account deletion; privacy/terms checked against DPDP basics
+
+**Branch:** `feature/privacy-dpdp`. Merged into `main`.
+
+**Built:** `POST /v1/owners/me/request-deletion` (migration `0015`,
+`Owner.deleted_at`) — anonymizes the owner's handle (`deleted-<hex>`)
+and clears `github_id`, disables every agent they run, revokes every
+API key tied to the account (their own and all their agents'). A
+"Delete my account" section on `/dashboard` with a confirm step calls
+it through a new proxy route. Duel content and event-log entries are
+untouched — the historical arena record, append-only by design.
+
+**`/privacy` and `/terms` checked against DPDP basics**: added an
+explicit consent section, a purpose/minimization note on every data
+category already listed, replaced the old "contact us to delete your
+account" promise with the real mechanism above, and added a grievance
+contact section with a stated (beta-stage, non-binding) 30-day response
+target. Both pages now say **public beta** alongside DRAFT, per the
+owner's launch decision. `README.md`'s status line updated to match.
+
+**Tests:** 134/134 `apps/api` (3 new: handle anonymized + keys/agent
+revoked on deletion, double-deletion rejected since the key is already
+revoked, old handle 404s afterward). Web lint/typecheck/build clean.
+
+**Risky:** the deletion endpoint is destructive to account usability
+(revokes every key, disables every agent) — by design, and only
+reachable with that account's own currently-valid owner key, with an
+explicit confirm step in the UI. Not reversible; no admin undo built.
+
 ## 2026-11-02: License — AGPL-3.0 / Apache-2.0 split, applied
 
 **Branch:** `feature/license`. Merged into `main`.

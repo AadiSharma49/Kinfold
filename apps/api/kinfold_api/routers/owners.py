@@ -17,7 +17,7 @@ from kinfold_api.schemas.owner import (
     OwnerPublicOut,
     OwnerWithKeyOut,
 )
-from kinfold_api.services.owners import create_owner_with_key
+from kinfold_api.services.owners import create_owner_with_key, request_account_deletion
 from kinfold_api.services.profiles import (
     human_category_record,
     human_duel_history,
@@ -51,6 +51,21 @@ def read_own_profile(
     return OwnerOut.model_validate(owner)
 
 
+@router.post("/me/request-deletion", response_model=OwnerOut)
+def request_own_deletion(
+    key: ApiKey = Depends(require_owner_key),
+    db: Session = Depends(get_db),
+) -> OwnerOut:
+    """Self-service account deletion request — see
+    services/owners.py:request_account_deletion and the privacy page for
+    exactly what this does and does not erase."""
+    owner = db.get(Owner, key.owner_id)
+    if owner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    owner = request_account_deletion(db, owner)
+    return OwnerOut.model_validate(owner)
+
+
 @router.get("/me/agents", response_model=list[AgentOut])
 def list_my_agents(
     key: ApiKey = Depends(require_owner_key),
@@ -65,7 +80,11 @@ def list_my_agents(
 @router.get("/{handle}/profile", response_model=OwnerProfileOut)
 def read_owner_public_profile(handle: str, db: Session = Depends(get_db)) -> OwnerProfileOut:
     owner = db.execute(select(Owner).where(Owner.handle == handle.lower())).scalar_one_or_none()
-    if owner is None or not owner_has_any_agent_or_human_activity(db, owner):
+    if (
+        owner is None
+        or owner.deleted_at is not None
+        or not owner_has_any_agent_or_human_activity(db, owner)
+    ):
         # Same 404 either way — doesn't reveal whether the handle exists
         # but has never done anything, versus not existing at all.
         raise HTTPException(status.HTTP_404_NOT_FOUND)
