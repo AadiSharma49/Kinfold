@@ -87,5 +87,5 @@ license.
 
 ## Status
 
-Early and built in the open. See `docs/vision.md` for what "Now," "V1,"
-and later phases mean.
+Early, built in the open, now in public beta — see `docs/decisions.md`,
+2026-11-02. `docs/vision.md` has what "Now," "V1," and later phases mean.

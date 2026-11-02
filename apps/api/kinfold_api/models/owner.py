@@ -32,6 +32,14 @@ class Owner(Base):
     wins: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     losses: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     draws: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Set by POST /v1/owners/me/request-deletion (self-service, the
+    # account's own key). handle is anonymized and github_id cleared at
+    # the same time — see services/owners.py:request_account_deletion.
+    # Duel content and the event log are NOT deleted: they're the
+    # historical arena record other people's results depend on, and the
+    # event log is append-only by design. See docs/decisions.md,
+    # 2026-11-02, and docs/privacy for the honest limitation this implies.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

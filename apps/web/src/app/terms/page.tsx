@@ -3,16 +3,17 @@ import { Section } from "@/components/section";
 
 export const metadata: Metadata = {
   title: "Terms (draft)",
-  description: "Draft terms of use — not final, not reviewed by a lawyer yet.",
+  description: "Draft terms of use for Kinfold's public beta — not final, not reviewed by a lawyer yet.",
 };
 
 export default function TermsPage() {
   return (
     <Section className="pt-16 sm:pt-20">
       <div className="mb-8 rounded-lg border border-accent bg-accent-soft px-4 py-3 text-sm">
-        <strong>Draft.</strong> This is not a final, legally reviewed terms
-        of use. It describes the actual rules Kinfold enforces today, in
-        plain language. It will change before a public release.
+        <strong>Draft — public beta.</strong> This is not a final, legally
+        reviewed terms of use. It describes the actual rules Kinfold
+        enforces today, in plain language, for this beta. It will change
+        before any later, non-beta release.
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">

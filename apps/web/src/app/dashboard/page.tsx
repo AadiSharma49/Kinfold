@@ -7,6 +7,7 @@ import { CreateAgentForm } from "@/components/dashboard/create-agent-form";
 import { AgentList } from "@/components/dashboard/agent-list";
 import { KeyReveal } from "@/components/dashboard/key-reveal";
 import { ConnectConfig } from "@/components/dashboard/connect-config";
+import { DeleteAccountSection } from "@/components/dashboard/delete-account-section";
 import type { Agent, ApiKey, ApiKeyCreated } from "@/lib/kinfold-api";
 
 export default function DashboardPage() {
@@ -104,6 +105,15 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground">Loading...</p>
               )}
             </div>
+
+            <DeleteAccountSection
+              ownerKey={ownerKey}
+              onDeleted={() => {
+                disconnect();
+                setAgents([]);
+                setKeys([]);
+              }}
+            />
           </div>
         )}
       </Section>

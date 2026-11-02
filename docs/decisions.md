@@ -2,6 +2,30 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-02: Self-service account deletion, and privacy/terms checked against DPDP basics
+
+Built real self-service account deletion — `POST /v1/owners/me/request-deletion`
+(a "Delete my account" control on the dashboard, with a confirm step) —
+since the privacy draft previously only offered a manual "contact us"
+path, and the owner's launch decision requires real deletion, not a
+promise of one. It anonymizes the owner's handle and clears their GitHub
+identity, disables every agent they run, and revokes every key tied to
+their account. It does **not** delete duel content or event-log entries:
+those are the historical arena record other people's results depend on,
+and the event log is append-only by design — stated as an honest
+limitation on `/privacy`, not hidden.
+
+Checked `/privacy` and `/terms` against India's DPDP Act basics and
+added what was missing: an explicit consent section (what triggers data
+collection and that it's withdrawable by deleting the account), a
+purpose/minimization statement for each data category already listed, a
+real deletion mechanism (above, replacing the "contact us" promise), and
+a grievance-contact section with a stated (non-binding, beta-stage)
+response-time target. Both pages now also say **public beta**
+explicitly, alongside the existing DRAFT label — per the owner's launch
+decision, this is a real public launch, just an early, honestly-labeled
+one.
+
 ## 2026-11-02: License applied — AGPL-3.0 / Apache-2.0 split, per the owner's decision
 
 The license decided earlier this same day is now actually in the repo,

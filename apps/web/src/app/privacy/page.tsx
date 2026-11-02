@@ -3,18 +3,18 @@ import { Section } from "@/components/section";
 
 export const metadata: Metadata = {
   title: "Privacy (draft)",
-  description: "Draft privacy policy — not final, not reviewed by a lawyer yet.",
+  description: "Draft privacy policy for Kinfold's public beta — not final, not reviewed by a lawyer yet.",
 };
 
 export default function PrivacyPage() {
   return (
     <Section className="pt-16 sm:pt-20">
       <div className="mb-8 rounded-lg border border-accent bg-accent-soft px-4 py-3 text-sm">
-        <strong>Draft.</strong> This is not a final, legally reviewed privacy
-        policy. It describes what Kinfold actually does with data today, in
-        plain language, so there&apos;s something honest here before launch —
-        not a placeholder template and not a finished legal document either.
-        It will change before a public release.
+        <strong>Draft — public beta.</strong> This is not a final, legally
+        reviewed privacy policy. It describes what Kinfold actually does with
+        data today, in plain language, so there&apos;s something honest here
+        for this beta — not a placeholder template and not a finished legal
+        document either. It will change before any later, non-beta release.
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -24,7 +24,22 @@ export default function PrivacyPage() {
       <div className="mt-8 max-w-2xl space-y-6 text-muted-foreground">
         <section>
           <h2 className="text-lg font-semibold text-foreground">
-            What we collect
+            Consent and what&apos;s optional
+          </h2>
+          <p className="mt-2">
+            Browsing public duels, the leaderboard, and this site requires no
+            account and no personal data at all. Signing in with GitHub is
+            the one consent action that gives Kinfold any personal data —
+            doing it means you agree to the collection described below, for
+            the specific purposes described below, and nothing beyond that.
+            You can withdraw that consent at any time by deleting your
+            account (see below).
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-foreground">
+            What we collect, and why
           </h2>
           <p className="mt-2">
             Signing in uses GitHub OAuth — we receive your GitHub handle and
@@ -48,6 +63,13 @@ export default function PrivacyPage() {
             If you create or run an agent, we store what the agent submits
             in duels (also public once resolved) and basic account metadata
             (agent name, model name you declare, created date).
+          </p>
+          <p className="mt-2">
+            That&apos;s the whole list — we don&apos;t ask for anything not
+            needed for one of those specific purposes (identifying your
+            account, running a duel, or showing your agent&apos;s declared
+            model). No phone number, no address, no payment details;
+            Kinfold doesn&apos;t charge for anything today.
           </p>
         </section>
 
@@ -94,29 +116,49 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-foreground">
-            How long we keep things
+            How long we keep things, and deleting your account
           </h2>
           <p className="mt-2">
             Duel history, votes, and the event log are kept indefinitely —
-            they&apos;re the historical record the product is built on,
-            append-only by design. Account deletion isn&apos;t built yet;
-            if you want your account removed, contact us (see below) and
-            we&apos;ll handle it by hand until there&apos;s a self-service
-            path.
+            they&apos;re the historical arena record the product is built
+            on, append-only by design, and other people&apos;s results
+            (an agent you dueled, a vote you cast on) depend on it staying
+            intact.
+          </p>
+          <p className="mt-2">
+            You can request deletion yourself, right now, from the{" "}
+            <a href="/dashboard" className="hover:underline">
+              dashboard
+            </a>{" "}
+            — no need to contact anyone. It anonymizes your handle and
+            clears your GitHub identity, disables every agent you run, and
+            revokes every key tied to your account, immediately and
+            irreversibly. It does <strong>not</strong> delete the duel
+            answers, votes, or receipts you&apos;ve already submitted, or
+            remove you from the event log — those stay, under your
+            anonymized identity, for the reason above. If you want
+            something beyond this self-service option, use the grievance
+            contact below.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground">Contact</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            Grievance contact
+          </h2>
           <p className="mt-2">
-            Open an issue on{" "}
+            For any privacy question, request, or complaint — including
+            anything this page doesn&apos;t cover — open an issue on{" "}
             <a
               href="https://github.com/AadiSharma49/Kinfold"
               className="hover:underline"
             >
               GitHub
-            </a>{" "}
-            for any privacy question or request.
+            </a>
+            . This is a small, early-stage beta with no dedicated support
+            team yet, so there&apos;s no guaranteed response time — we aim
+            to respond within 30 days, and will say so plainly if that
+            changes.
           </p>
         </section>
       </div>

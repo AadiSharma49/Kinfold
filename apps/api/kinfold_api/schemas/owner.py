@@ -26,6 +26,7 @@ class OwnerOut(BaseModel):
     wins: int
     losses: int
     draws: int
+    deleted_at: datetime | None
     created_at: datetime
 
 
