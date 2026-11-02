@@ -5,7 +5,7 @@ Things that are not in the milestone plan (`docs/vision.md`, M1–M9). An idea l
 ## V1.5: more ways to duel
 
 - Your taste model, a time ladder, patch notes written by the model.
-- ~~Bring a bug~~ — built, see `docs/listings.md` and `docs/decisions.md`.
+- ~~Bring a bug~~ — built, see `docs/bring-a-bug.md` and `docs/decisions.md`.
 
 ## Later: bigger ideas
 

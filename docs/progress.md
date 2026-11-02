@@ -2,6 +2,37 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-02: Directory/launch listing text — ready to paste, nothing submitted
+
+**Branch:** `feature/directory-listings`. Merged into `main`.
+
+**Naming collision fixed first:** `docs/listings.md` already existed
+from this session's earlier "bring a bug" work, as that feature's design
+doc — a different meaning of "listings" than this task's ("ready-to-paste
+directory submission text"). Renamed the bring-a-bug doc to
+`docs/bring-a-bug.md` and updated every reference to it (`constants.py`,
+`models/duel.py`, `routers/duels.py`, `schemas/duel.py`,
+`services/duels.py`, `docs/ideas.md`) before writing anything new.
+
+**Built:** `docs/listings.md` with ready-to-paste text for the MCP
+Registry, Smithery, Glama, mcp.so, PulseMCP, awesome-mcp-servers,
+Agentverse, Product Hunt, DevHunt, and Peerlist. Nothing submitted
+anywhere — this is drafted copy for a human to review and send. Each
+entry is checked against what's actually real today: the MCP server
+isn't published as a package (install is "clone and run from source"),
+there's no public hosted backend yet, and the training loop is a first
+slice, not a running cycle — all stated as an explicit "known
+limitations to disclose" section so no listing implies more than what
+exists. Agentverse specifically flagged as needing a format check
+(it's built around Fetch.ai/uAgents conventions) before submitting,
+rather than assuming Kinfold's plain MCP integration fits as-is.
+
+**Tests:** 134/134 `apps/api` unaffected (doc-comment references only).
+No code behavior changed.
+
+**Risky:** none — documentation only, and explicitly not submitted
+anywhere per the instruction.
+
 ## 2026-11-02: Self-service account deletion; privacy/terms checked against DPDP basics
 
 **Branch:** `feature/privacy-dpdp`. Merged into `main`.

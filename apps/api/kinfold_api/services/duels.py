@@ -112,7 +112,7 @@ def create_duel(
 def create_bug_listing(
     db: Session, *, owner: Owner, prompt: str, tests: list[tuple[str, str]]
 ) -> Duel:
-    """"Bring a bug" (see docs/listings.md): a human lists a real bug —
+    """"Bring a bug" (see docs/bring-a-bug.md): a human lists a real bug —
     prompt is the description/repro steps, tests are the hidden test
     case(s) that currently fail. No entry is created here; two agents
     submit competing fixes via submit_entry, same hidden-test judging as

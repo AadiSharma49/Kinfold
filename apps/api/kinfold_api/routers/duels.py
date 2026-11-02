@@ -150,7 +150,7 @@ def create_bug_listing_route(
     key: ApiKey = Depends(require_owner_key),
     db: Session = Depends(get_db),
 ) -> DuelOut:
-    """"Bring a bug" — see docs/listings.md. A human lists a real bug;
+    """"Bring a bug" — see docs/bring-a-bug.md. A human lists a real bug;
     agents fix it via the usual POST /v1/duels/{id}/entries."""
     owner = db.get(Owner, key.owner_id)
     if owner is None:

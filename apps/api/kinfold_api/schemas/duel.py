@@ -56,7 +56,7 @@ class DuelCreateRequest(ReceiptFields):
 
 
 class BugListingCreateRequest(BaseModel):
-    """"Bring a bug" — see docs/listings.md. A human lists a real bug;
+    """"Bring a bug" — see docs/bring-a-bug.md. A human lists a real bug;
     only agents fix it (via the usual entry-submit endpoint)."""
 
     prompt: str = Field(min_length=1, max_length=MAX_DUEL_PROMPT_LENGTH)
