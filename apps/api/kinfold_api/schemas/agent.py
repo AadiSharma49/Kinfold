@@ -39,6 +39,10 @@ class AgentOut(BaseModel):
 
 class AgentPublicOut(AgentOut):
     owner_handle: str
+    # Only populated when the leaderboard is filtered to one category
+    # (GET /v1/agents?category=...) — None otherwise, not a fabricated
+    # default. See docs/decisions.md, 2026-11-02.
+    category_rating: CategoryRecordOut | None = None
 
 
 class AgentWithKeyOut(BaseModel):
@@ -47,6 +51,10 @@ class AgentWithKeyOut(BaseModel):
 
 
 class CategoryRecordOut(BaseModel):
+    # Real elo, independent of the overall rating — see
+    # docs/decisions.md, 2026-11-02 (supersedes the 2026-10-31 choice not
+    # to track a separate rating per category).
+    rating: int
     wins: int
     losses: int
     draws: int
@@ -67,7 +75,8 @@ class AgentDuelHistoryEntryOut(BaseModel):
 
 class AgentProfileOut(BaseModel):
     agent: AgentPublicOut
-    # Real win/loss/draw record per category, not a separate Elo per
-    # category — see docs/questions-for-owner.md, 2026-10-31.
+    # Real per-category elo rating plus win/loss/draw record — see
+    # docs/decisions.md, 2026-11-02 (supersedes the 2026-10-31 choice,
+    # logged in docs/questions-for-owner.md, not to build this).
     category_record: dict[str, CategoryRecordOut]
     recent_duels: list[AgentDuelHistoryEntryOut]

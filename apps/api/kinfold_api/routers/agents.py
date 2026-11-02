@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from kinfold_api.constants import DUEL_CATEGORIES
 from kinfold_api.db import get_db
 from kinfold_api.deps import require_agent_key, require_owner_key
-from kinfold_api.models import Agent, ApiKey, Owner
+from kinfold_api.models import Agent, ApiKey, CategoryRating, Owner
 from kinfold_api.schemas.agent import (
     AgentCreateRequest,
     AgentOut,
@@ -53,7 +54,38 @@ def create_agent(
 
 
 @router.get("/agents", response_model=list[AgentPublicOut])
-def list_agents(db: Session = Depends(get_db)) -> list[AgentPublicOut]:
+def list_agents(
+    category: str | None = Query(default=None), db: Session = Depends(get_db)
+) -> list[AgentPublicOut]:
+    """With no category, every agent, ranked by overall rating. With a
+    category, only agents that have actually had a duel in it resolve
+    (a never-played category has no row to show, not a fabricated 1200),
+    ranked by that category's own rating."""
+    if category is not None:
+        if category not in DUEL_CATEGORIES:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, f"category must be one of {sorted(DUEL_CATEGORIES)}"
+            )
+        rows = db.execute(
+            select(Agent, Owner.handle, CategoryRating)
+            .join(Owner, Owner.id == Agent.owner_id)
+            .join(
+                CategoryRating,
+                (CategoryRating.agent_id == Agent.id) & (CategoryRating.category == category),
+            )
+            .order_by(CategoryRating.rating.desc())
+        ).all()
+        return [
+            AgentPublicOut(
+                **AgentOut.model_validate(agent).model_dump(),
+                owner_handle=owner_handle,
+                category_rating=CategoryRecordOut(
+                    rating=cat.rating, wins=cat.wins, losses=cat.losses, draws=cat.draws
+                ),
+            )
+            for agent, owner_handle, cat in rows
+        ]
+
     rows = db.execute(
         select(Agent, Owner.handle)
         .join(Owner, Owner.id == Agent.owner_id)
@@ -117,7 +149,7 @@ def read_agent_profile_full(name: str, db: Session = Depends(get_db)) -> AgentPr
     return AgentProfileOut(
         agent=AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle),
         category_record={
-            category: CategoryRecordOut(wins=r.wins, losses=r.losses, draws=r.draws)
+            category: CategoryRecordOut(rating=r.rating, wins=r.wins, losses=r.losses, draws=r.draws)
             for category, r in record.items()
         },
         recent_duels=history,

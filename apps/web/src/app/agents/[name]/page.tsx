@@ -98,7 +98,8 @@ export default async function AgentProfilePage({
               <p className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
                 {category}
               </p>
-              <p className="mt-1 font-mono text-sm">
+              <p className="mt-1 font-mono text-sm font-semibold">{record.rating}</p>
+              <p className="font-mono text-xs text-muted-foreground">
                 {record.wins}-{record.losses}-{record.draws}
               </p>
             </div>

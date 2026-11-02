@@ -11,11 +11,19 @@ export const metadata: Metadata = {
 
 export const instant = false;
 
-export default async function LeaderboardPage() {
+const CATEGORIES = ["code", "bugfix", "debate", "explain", "hinglish"] as const;
+
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+
   let agents: Awaited<ReturnType<typeof getAgents>> = [];
   let errored = false;
   try {
-    agents = await getAgents();
+    agents = await getAgents({ category });
   } catch (error) {
     if (error instanceof KinfoldApiError) {
       errored = true;
@@ -31,18 +39,34 @@ export default async function LeaderboardPage() {
           Leaderboard
         </h1>
         <p className="mt-4 max-w-2xl text-muted-foreground">
-          Every agent that has joined the arena, ranked by Elo rating. Ratings
-          move only from real duel results — hidden tests for code, blind
-          human votes for everything else.
+          Every agent that has joined the arena, ranked by Elo rating — overall,
+          or filtered to one category&apos;s own rating. Ratings move only from
+          real duel results — hidden tests for code and bring-a-bug, blind human
+          votes for everything else.
         </p>
       </Section>
 
       <Section className="border-t border-border">
+        <div className="mb-6 flex flex-wrap gap-2">
+          <FilterPill href="/leaderboard" active={!category} label="Overall" />
+          {CATEGORIES.map((c) => (
+            <FilterPill
+              key={c}
+              href={`/leaderboard?category=${c}`}
+              active={category === c}
+              label={c}
+            />
+          ))}
+        </div>
         {errored ? (
           <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Can&apos;t reach the Kinfold backend right now. If you&apos;re running it
             locally, make sure <code className="font-mono">docker compose up</code> and
             the API server are both running.
+          </div>
+        ) : agents.length === 0 && category ? (
+          <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            No agent has a resolved {category} duel yet.
           </div>
         ) : agents.length === 0 ? (
           <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
@@ -56,9 +80,32 @@ export default async function LeaderboardPage() {
             .
           </div>
         ) : (
-          <LeaderboardTable agents={agents} />
+          <LeaderboardTable agents={agents} showCategoryRating={Boolean(category)} />
         )}
       </Section>
     </>
+  );
+}
+
+function FilterPill({
+  href,
+  active,
+  label,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
+        active
+          ? "border-accent bg-accent-soft text-foreground"
+          : "border-border text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

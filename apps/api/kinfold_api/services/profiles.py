@@ -6,11 +6,12 @@ from typing import NamedTuple
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from kinfold_api.models import Agent, Duel, DuelEntry, Owner
+from kinfold_api.models import Agent, CategoryRating, Duel, DuelEntry, Owner
 from kinfold_api.services.duels import agent_info_lookup, owner_handle_lookup, winning_entry_id
 
 
 class CategoryRecord(NamedTuple):
+    rating: int
     wins: int
     losses: int
     draws: int
@@ -24,25 +25,28 @@ def _result_for(duel: Duel, own_entry: DuelEntry, entries: list[DuelEntry]) -> s
 
 
 def agent_category_record(db: Session, agent_id: uuid.UUID) -> dict[str, CategoryRecord]:
-    """Real win/loss/draw counts per category, computed from actual
-    resolved duels — not a separate Elo per category, which Kinfold
-    doesn't track. See docs/questions-for-owner.md, 2026-10-31."""
+    """Real per-category elo rating plus win/loss/draw counts, read
+    straight from CategoryRating — the same rows apply_resolution writes,
+    so this can never drift from what actually happened. A category with
+    no row yet means this agent has never had a duel in it resolve, not a
+    zero rating. See docs/decisions.md, 2026-11-02."""
+    rows = db.execute(select(CategoryRating).where(CategoryRating.agent_id == agent_id)).scalars().all()
+    return {
+        r.category: CategoryRecord(rating=r.rating, wins=r.wins, losses=r.losses, draws=r.draws)
+        for r in rows
+    }
+
+
+def human_category_record(db: Session, owner_id: uuid.UUID) -> dict[str, CategoryRecord]:
+    """Same as agent_category_record, for a human's own crowd-duel
+    entries. See docs/decisions.md, 2026-11-02."""
     rows = db.execute(
-        select(Duel, DuelEntry)
-        .join(DuelEntry, DuelEntry.duel_id == Duel.id)
-        .where(DuelEntry.agent_id == agent_id, Duel.status == "resolved")
-    ).all()
-
-    record: dict[str, list[int]] = {}
-    for duel, entry in rows:
-        entries = db.execute(
-            select(DuelEntry).where(DuelEntry.duel_id == duel.id)
-        ).scalars().all()
-        result = _result_for(duel, entry, entries)
-        bucket = record.setdefault(duel.category, [0, 0, 0])
-        bucket[{"win": 0, "loss": 1, "draw": 2}[result]] += 1
-
-    return {category: CategoryRecord(*counts) for category, counts in record.items()}
+        select(CategoryRating).where(CategoryRating.human_owner_id == owner_id)
+    ).scalars().all()
+    return {
+        r.category: CategoryRecord(rating=r.rating, wins=r.wins, losses=r.losses, draws=r.draws)
+        for r in rows
+    }
 
 
 def agent_duel_history(db: Session, agent_id: uuid.UUID, limit: int = 20) -> list[dict]:

@@ -67,6 +67,9 @@ export type Agent = {
   losses: number;
   draws: number;
   created_at: string;
+  // Only set when the leaderboard is filtered to one category
+  // (GET /v1/agents?category=...) — null otherwise.
+  category_rating: CategoryRecord | null;
 };
 
 export type ApiKey = {
@@ -83,7 +86,7 @@ export type ApiKey = {
 
 export type ApiKeyCreated = ApiKey & { key: string; warning: string };
 
-export type CategoryRecord = { wins: number; losses: number; draws: number };
+export type CategoryRecord = { rating: number; wins: number; losses: number; draws: number };
 
 export type AgentDuelHistoryEntry = {
   duel_id: string;
@@ -117,7 +120,15 @@ export type HumanDuelHistoryEntry = {
 };
 
 export type OwnerProfile = {
-  owner: { handle: string; created_at: string };
+  owner: {
+    handle: string;
+    created_at: string;
+    rating: number;
+    wins: number;
+    losses: number;
+    draws: number;
+  };
+  category_record: Record<string, CategoryRecord>;
   human_duel_history: HumanDuelHistoryEntry[];
 };
 
@@ -182,17 +193,22 @@ export async function getDuel(id: string): Promise<DuelDetail | null> {
   return response.json();
 }
 
-export async function getAgents(): Promise<Agent[]> {
+export async function getAgents(params: { category?: string } = {}): Promise<Agent[]> {
+  const query = new URLSearchParams();
+  if (params.category) query.set("category", params.category);
+  const qs = query.toString();
+
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}/v1/agents`, { cache: "no-store" });
+    response = await fetch(`${API_BASE}/v1/agents${qs ? `?${qs}` : ""}`, { cache: "no-store" });
   } catch (cause) {
     throw new KinfoldApiError("Can't reach the Kinfold backend right now.", { cause });
   }
   if (!response.ok) {
     throw new KinfoldApiError(`Failed to load agents (${response.status})`);
   }
-  // The API already returns agents sorted by rating, highest first.
+  // The API already returns agents sorted by rating (or, with a category
+  // filter, that category's rating), highest first.
   return response.json();
 }
 

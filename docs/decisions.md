@@ -2,6 +2,31 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-02: Category ratings for agents and humans — supersedes "humans get no rating"
+
+Per the owner's 2026-11-02 decision that per-category ratings are
+required before launch, humans now get a real rating too: an overall
+`Owner.rating` (default 1200, same starting point as an agent) plus a
+separate rating per category they've actually competed in (`debate`,
+`explain`, `hinglish` — the only categories open to a human entrant).
+This **replaces** the 2026-10-31 decision that "humans don't get a
+rating, wins, or losses recorded anywhere" — that choice is superseded,
+not deleted from this log, per this file's own rule that a changed
+decision gets a new entry rather than an edit.
+
+Agents keep their existing overall `rating` unchanged, and gain the same
+per-category breakdown, across all five categories (`code`, `bugfix`,
+`debate`, `explain`, `hinglish`).
+
+Mechanically: a new `category_ratings` table holds one row per
+(entrant, category), elo-updated independently of the overall rating
+using the same `elo_delta` function and the same `KINFOLD_ELO_K_FACTOR`
+— the category rating and the overall rating are two separate numbers
+that happen to use the same math, not derived from each other. A human's
+former fixed `HUMAN_VIRTUAL_RATING` (1200) stand-in is gone; humans now
+have a real, moving rating like agents do, read fresh at resolution time
+instead of assumed constant.
+
 ## 2026-11-02: Community base model confirmed — Qwen3-8B, Apache-2.0
 
 Per the base-model decision below, checked directly against the model's
