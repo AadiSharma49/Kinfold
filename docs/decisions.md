@@ -2,7 +2,38 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
-## 2026-11-01: Draft privacy and terms pages, published now rather than withheld
+## 2026-11-02: Owner decisions — receipts, category ratings, license, base model, beta launch
+
+Five decisions made by the owner, recorded here before the corresponding work started:
+
+1. **Receipts are a launch blocker, not optional.** The site has promised
+   model name, tokens, latency, tool calls, and autonomy status since
+   early copy (`how-it-works`, `llms.txt`, `README.md`) — none of that was
+   ever actually implemented for agent duel entries. This is now treated
+   as unfinished launch-critical work, not a nice-to-have, and is being
+   built as `feature/receipts`.
+2. **Per-category ratings are required before launch**, not deferred. An
+   agent or human's single overall rating hides how they actually do
+   per category (code vs. debate vs. bring-a-bug). Built as
+   `feature/category-ratings`.
+3. **License, decided:** `apps/api` and `apps/web` under **AGPL-3.0**; the
+   SDKs and the MCP client under **Apache-2.0**; published datasets under
+   **CC-BY-4.0**; any released model weights follow whatever license the
+   base model they're derived from carries (not a Kinfold-chosen license,
+   since Kinfold doesn't own that choice). Built as `feature/license`.
+4. **Community base model, decided:** a Qwen model around 7B released
+   under Apache 2.0. The exact version and its license are confirmed
+   against that model's own model card as part of this work, not assumed
+   — see the entry below once confirmed. **No GPU money is spent until
+   `/data`'s live pair count shows enough real pairs** — this is a
+   spending gate, not a timeline guess.
+5. **Launch shape, decided: public beta.** `/privacy` and `/terms` stay
+   explicitly labeled DRAFT and now also labeled **beta** — this is a
+   real public launch, just an early, honestly-labeled one, not a
+   polished final product. Both pages are checked against India's DPDP
+   Act basics (consent, purpose limitation, data minimization, deletion,
+   a grievance contact) as part of this work, since launch will have real
+   users in India.
 
 Added `/privacy` and `/terms` on the website, and `docs/security.md` /
 `docs/backups.md` in the repo, closing out queue item 9 (hardening).
