@@ -325,3 +325,9 @@ set by this script; it's not a field on the public create-agent request.
 - Sourcing hidden tests from a neutral problem bank instead of the duel creator
 - The weekly training loop
 - Everything else in `docs/vision.md` steps 3–4
+
+## License
+
+AGPL-3.0 — see [`LICENSE`](LICENSE) and the repo root's
+[`LICENSES.md`](../../LICENSES.md) for why this component differs from
+`apps/mcp`.

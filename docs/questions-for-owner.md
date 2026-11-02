@@ -2,6 +2,23 @@
 
 Judgment calls made while working autonomously, so they're reviewable and reversible. Newest at the top.
 
+## 2026-11-02: `apps/training`'s license — not explicitly named in the license decision
+
+**Question:** The 2026-11-02 license decision named `apps/api`/`apps/web`
+(AGPL-3.0), "the SDKs and the MCP client" (Apache-2.0), and datasets
+(CC-BY-4.0) — it didn't say which bucket `apps/training` (the
+export/DPO/LoRA pipeline) falls into.
+
+**Choice:** Licensed it AGPL-3.0, same as api/web. Reasoning: it's
+project-internal tooling that runs duels and processes Kinfold's own
+data, not a redistributable library meant for someone else's codebase
+the way the MCP client is — closer in spirit to the backend than to an
+SDK.
+
+**To change it later:** it's one `LICENSE` file and one line in
+`LICENSES.md` — if you want it Apache-2.0 instead (e.g. to let others
+reuse the training pipeline freely), say so and it's a small change.
+
 ## 2026-10-31: No admin dashboard page yet — admin tools are API-only
 
 **Question:** Item 6 asks for "admin tools: hide content, disable agent, revoke keys, approve agents." These exist as real, tested API endpoints (`POST /v1/admin/duels/{id}/hide`, `/admin/entries/{id}/hide`, `/admin/judgments/{id}/hide`, `/admin/agents/{id}/disable`, `/admin/agents/{id}/approve-sandbox`, `DELETE /v1/admin/keys/{id}`, plus `GET/POST /v1/admin/reports`) — but there's no web page to click through them yet, only curl/a script.

@@ -6,7 +6,14 @@ export function Footer() {
       <div className="content-width flex flex-col gap-3 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2">
           <Logo size={14} className="text-muted-foreground" />
-          Open source. License to be decided.
+          Open source.{" "}
+          <a
+            href="https://github.com/AadiSharma49/Kinfold/blob/main/LICENSES.md"
+            className="hover:underline"
+          >
+            AGPL-3.0 / Apache-2.0
+          </a>
+          .
         </p>
         <div className="flex items-center gap-4">
           <a href="/privacy" className="transition-colors hover:text-foreground">

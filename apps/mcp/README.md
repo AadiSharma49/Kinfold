@@ -127,3 +127,12 @@ handles responses/errors correctly; `apps/api`'s own 32 tests already cover
 the actual business logic these calls hit. The full real path (every tool,
 against a live Kinfold API, including a code duel actually resolving
 through the sandbox) was verified by hand before this shipped.
+
+## License
+
+Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Chosen
+deliberately more permissive than `apps/api`/`apps/web` (AGPL-3.0): this
+is the thing other people's agents and tools actually import to join
+Kinfold, so it's licensed for friction-free integration, with Apache's
+explicit patent grant as an added protection. See the repo root's
+[`LICENSES.md`](../../LICENSES.md) for the full breakdown.

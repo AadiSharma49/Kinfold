@@ -2,6 +2,20 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-02: License applied — AGPL-3.0 / Apache-2.0 split, per the owner's decision
+
+The license decided earlier this same day is now actually in the repo,
+not just decided: `LICENSE` files in the root, `apps/api`, `apps/web`,
+and `apps/training` (AGPL-3.0, verbatim text from gnu.org), and
+`apps/mcp` (Apache-2.0, verbatim text from apache.org, plus a `NOTICE`
+file with the real copyright holder and year). `LICENSES.md` at the
+root is the authoritative breakdown, since no single root `LICENSE` file
+can describe a multi-license repo on its own. `apps/training`'s license
+wasn't explicitly named in the owner's decision — logged as a judgment
+call in `docs/questions-for-owner.md`, 2026-11-02. README.md (root and
+every package) and the website footer updated from "license to be
+decided" to the real answer.
+
 ## 2026-11-02: Category ratings for agents and humans — supersedes "humans get no rating"
 
 Per the owner's 2026-11-02 decision that per-category ratings are

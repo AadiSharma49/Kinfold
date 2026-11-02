@@ -222,6 +222,8 @@ _DATASET_CARD_TEMPLATE = """# Kinfold preference pairs — dataset card
 **Version:** {version}
 **Generated:** {generated_at}
 **Pairs:** {pair_count}
+**License:** CC-BY-4.0 — see `docs/decisions.md`, 2026-11-02, and the
+repo root's `LICENSES.md`. Attribute Kinfold if you use this data.
 
 ## What this is
 
