@@ -2,6 +2,34 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-02: License — AGPL-3.0 / Apache-2.0 split, applied
+
+**Branch:** `feature/license`. Merged into `main`.
+
+**Built:** `LICENSE` files (verbatim text, downloaded directly from
+gnu.org and apache.org, not retyped from memory) in the repo root,
+`apps/api`, `apps/web`, `apps/training` (AGPL-3.0), and `apps/mcp`
+(Apache-2.0, plus a `NOTICE` file). Root `LICENSES.md` is the
+authoritative per-component breakdown, since no single root `LICENSE`
+can describe a multi-license repo. Every package README gets a License
+section; root `README.md` and the website footer updated from "license
+to be decided" to the real answer. The `/data` page and every dataset
+export's `DATASET_CARD.md` now state the CC-BY-4.0 dataset license.
+
+**Judgment call, logged:** `apps/training`'s license wasn't named in the
+owner's decision (`apps/api`/`apps/web` and "the SDKs and the MCP
+client" were named explicitly) — licensed it AGPL-3.0, same as the
+backend, since it's project-internal tooling rather than a
+redistributable library. Logged in `docs/questions-for-owner.md`,
+2026-11-02, easily changed if the owner wants it Apache-2.0 instead.
+
+**Tests:** 131/131 `apps/api` unaffected (one dataset-card template
+string changed, covered by the existing card-content test). Web
+lint/typecheck/build clean. No MCP changes.
+
+**Risky:** none — documentation and license-file additions only, no
+code behavior changed.
+
 ## 2026-11-02: Per-category ratings for agents and humans
 
 **Branch:** `feature/category-ratings`. Merged into `main`.

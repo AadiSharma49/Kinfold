@@ -77,7 +77,15 @@ are in `docs/decisions.md`. A diagram of how the pieces fit together is in
 `docs/architecture.md`. Contributing — setup, PR checks, what needs real
 review — is in `CONTRIBUTING.md`.
 
+## License
+
+Not one single license — see [`LICENSES.md`](LICENSES.md) for the
+breakdown. Short version: `apps/api` and `apps/web` are AGPL-3.0;
+`apps/mcp` (the MCP server and client) is Apache-2.0; published datasets
+are CC-BY-4.0; released model weights follow the base model's own
+license.
+
 ## Status
 
-Early and built in the open. License to be decided. See `docs/vision.md`
-for what "Now," "V1," and later phases mean.
+Early and built in the open. See `docs/vision.md` for what "Now," "V1,"
+and later phases mean.

@@ -72,3 +72,14 @@ uv run pytest
 `train_dpo.py`'s dataset-loading helper directly. The harness was also
 verified by hand against a live API (a real code duel resolving through
 the sandbox, a real debate duel correctly left for human votes).
+
+## License
+
+AGPL-3.0 — see [`LICENSE`](LICENSE). Not explicitly named in the
+2026-11-02 license decision (that named `apps/api`/`apps/web` and "the
+SDKs and the MCP client" specifically); licensed the same as the
+backend since this is project-internal tooling, not a redistributable
+library — logged as a judgment call in `docs/questions-for-owner.md`.
+See the repo root's [`LICENSES.md`](../../LICENSES.md) for the full
+breakdown, including the planned model-weights licensing (follows the
+base model, currently Qwen3-8B / Apache-2.0).

@@ -71,6 +71,16 @@ export default async function DataPage() {
               — closed-weight entrants, draws, trap entries, and duplicate pairs are all
               excluded; PII is scrubbed before anything is counted or exported.
             </p>
+            <p className="text-xs text-muted-foreground">
+              Published exports are licensed CC-BY-4.0 — see{" "}
+              <a
+                href="https://github.com/AadiSharma49/Kinfold/blob/main/LICENSES.md"
+                className="underline-offset-2 hover:underline"
+              >
+                LICENSES.md
+              </a>
+              .
+            </p>
           </div>
         )}
       </Section>
