@@ -2,6 +2,26 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-02: Community base model confirmed — Qwen3-8B, Apache-2.0
+
+Per the base-model decision below, checked directly against the model's
+own Hugging Face model card (not assumed from memory):
+
+- **Model:** `Qwen/Qwen3-8B` (8.2B total parameters, 6.95B non-embedding —
+  Qwen's current-generation ~7B-class model, newer than Qwen2.5-7B, which
+  is also Apache-2.0 but an older generation). A `Qwen/Qwen3-8B-Base`
+  variant exists for anyone who wants to start from the pretrained-only
+  checkpoint instead.
+- **License, verified from the model card:** `apache-2.0`.
+- **Why the instruct release, not the base checkpoint:** `apps/training`'s
+  DPO pipeline preference-tunes an already instruction-following model;
+  starting from `Qwen3-8B` (instruct) rather than `Qwen3-8B-Base` matches
+  that pipeline's existing assumptions and needs no base-model-specific
+  changes to the training code.
+- **No GPU money spent yet** — per the spending gate below, this is a
+  recorded decision for when `/data` shows enough pairs, not a run that
+  has happened.
+
 ## 2026-11-02: Owner decisions — receipts, category ratings, license, base model, beta launch
 
 Five decisions made by the owner, recorded here before the corresponding work started:
