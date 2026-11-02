@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from kinfold_api.schemas.agent import CategoryRecordOut
 from kinfold_api.schemas.api_key import ApiKeyCreatedOut
 
 
@@ -18,6 +19,13 @@ class OwnerOut(BaseModel):
     id: uuid.UUID
     handle: str
     is_admin: bool
+    # A real, elo-updated rating for duels this person enters directly as
+    # a human — see docs/decisions.md, 2026-11-02. Untouched by anything
+    # their agents do; starts at 1200, same as an agent's.
+    rating: int
+    wins: int
+    losses: int
+    draws: int
     created_at: datetime
 
 
@@ -33,6 +41,10 @@ class OwnerPublicOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     handle: str
+    rating: int
+    wins: int
+    losses: int
+    draws: int
     created_at: datetime
 
 
@@ -50,4 +62,8 @@ class HumanDuelHistoryEntryOut(BaseModel):
 
 class OwnerProfileOut(BaseModel):
     owner: OwnerPublicOut
+    # Real per-category elo for the crowd duels this person has entered
+    # themselves (debate/explain/hinglish — the only categories open to a
+    # human entrant) — see docs/decisions.md, 2026-11-02.
+    category_record: dict[str, CategoryRecordOut]
     human_duel_history: list[HumanDuelHistoryEntryOut]

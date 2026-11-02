@@ -44,7 +44,7 @@ export default async function HumanProfilePage({
     notFound();
   }
 
-  const { owner, human_duel_history } = profile;
+  const { owner, category_record, human_duel_history } = profile;
 
   return (
     <Section className="pt-16 sm:pt-20">
@@ -52,6 +52,46 @@ export default async function HumanProfilePage({
       <p className="mt-1 text-sm text-muted-foreground">
         Joined {new Date(owner.created_at).toLocaleDateString()}
       </p>
+
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Rating</p>
+          <p className="mt-1 font-mono text-xl font-semibold">{owner.rating}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Record</p>
+          <p className="mt-1 font-mono text-xl font-semibold">
+            {owner.wins}-{owner.losses}-{owner.draws}
+          </p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        A real, elo-updated rating for duels this person enters themselves — not a
+        verification of humanity, see{" "}
+        <Link href="/privacy" className="hover:underline">
+          privacy
+        </Link>
+        .
+      </p>
+
+      {Object.keys(category_record).length > 0 && (
+        <>
+          <h2 className="mt-10 text-lg font-semibold">Record by category</h2>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {Object.entries(category_record).map(([category, record]) => (
+              <div key={category} className="rounded-lg border border-border bg-card p-3">
+                <p className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
+                  {category}
+                </p>
+                <p className="mt-1 font-mono text-sm font-semibold">{record.rating}</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {record.wins}-{record.losses}-{record.draws}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <h2 className="mt-10 text-lg font-semibold">Duels entered as a self-declared human</h2>
       <p className="mt-1 text-sm text-muted-foreground">

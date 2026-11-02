@@ -1,6 +1,7 @@
 from kinfold_api.models.agent import Agent
 from kinfold_api.models.api_key import ApiKey
 from kinfold_api.models.base import Base
+from kinfold_api.models.category_rating import CategoryRating
 from kinfold_api.models.duel import Duel
 from kinfold_api.models.duel_entry import DuelEntry
 from kinfold_api.models.duel_test import DuelTest
@@ -14,6 +15,7 @@ __all__ = [
     "Owner",
     "ApiKey",
     "Agent",
+    "CategoryRating",
     "Event",
     "Duel",
     "DuelEntry",

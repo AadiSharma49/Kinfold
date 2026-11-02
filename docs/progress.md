@@ -2,6 +2,50 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-02: Per-category ratings for agents and humans
+
+**Branch:** `feature/category-ratings`. Merged into `main`.
+
+**Built:** a new `category_ratings` table — one elo-updated row per
+(entrant, category), independent of the one overall rating. Updates at
+the same moment `apply_resolution` updates the overall rating, using the
+same `elo_delta` function and K-factor, but as a fully separate number:
+a code win doesn't move an agent's debate rating. Covers all five
+categories (`code`, `bugfix`, `debate`, `explain`, `hinglish`) for
+agents, and the three crowd categories a human can actually enter
+(`debate`, `explain`, `hinglish`) for humans.
+
+**Humans now get a real rating, overall and per category** —
+`Owner.rating`/`wins`/`losses`/`draws`, starting at 1200 like an agent.
+This replaces the fixed `HUMAN_VIRTUAL_RATING` stand-in and **supersedes**
+the 2026-10-31 decision that humans get no rating at all — logged as a
+new entry in `docs/decisions.md`, not an edit to the old one.
+
+**Shown on profiles**: `/agents/[name]` and `/humans/[handle]` both show
+an overall rating/record plus a per-category breakdown (rating, not just
+win/loss/draw — the old `docs/questions-for-owner.md` choice not to track
+this is also superseded). **Shown on the leaderboard**: `/leaderboard`
+now has a category filter pill row; filtering to one category re-sorts
+by that category's own rating and only lists agents who've actually had
+a duel in it resolve (no fabricated 1200 for a category an agent has
+never played).
+
+**Scope choice, logged honestly:** no new human leaderboard page was
+built — none existed before this round, and "per-category ratings"
+reads as extending what exists (agent leaderboard, both profile pages),
+not building a new page type from scratch. A human's own rating is
+visible on their own profile.
+
+**Tests:** 131/131 `apps/api` (6 new: agent category rating on a win,
+category ratings move independently of each other, human overall +
+category rating, leaderboard category filter excluding agents who
+haven't played it, bad-category 400). 16/16 `apps/mcp` unaffected. Web
+lint/typecheck/build clean.
+
+**Risky:** none newly introduced — new table, new nullable-free columns
+with safe defaults (1200/0/0/0) backfilled by the migration itself for
+every existing owner.
+
 ## 2026-11-02: Receipts — a launch blocker, now actually built
 
 **Branch:** `feature/receipts`. Merged into `main`.

@@ -10,15 +10,17 @@ from sqlalchemy.orm import Session
 
 from kinfold_api.config import get_settings
 from kinfold_api.constants import CROWD_CATEGORIES, VERIFIED_CATEGORIES
-from kinfold_api.models import Agent, Duel, DuelEntry, DuelTest, Owner
+from kinfold_api.models import Agent, CategoryRating, Duel, DuelEntry, DuelTest, Owner
 from kinfold_api.services.events import append_event
 from kinfold_api.services.rating import elo_delta
 from kinfold_api.services.receipts import ReceiptIn, compute_latency_ms
 from kinfold_api.services.sandbox import SandboxUnavailableError, run_python_tests
 
-# Humans don't have an Elo rating, so a human entry's "opponent strength"
-# for the agent's own rating update is this fixed value — see
-# docs/decisions.md, 2026-10-31.
+# Humans now have a real rating (Owner.rating) — see docs/decisions.md,
+# 2026-11-02, which supersedes the fixed stand-in this used to be. Kept
+# only as the defensive fallback in apply_resolution for an entry with
+# neither an agent nor an owner, which the DB's own entrant-kind check
+# constraint should never actually allow.
 HUMAN_VIRTUAL_RATING = 1200
 
 
@@ -395,6 +397,35 @@ def resolve_verified_duel(db: Session, duel: Duel) -> None:
         apply_resolution(db, duel, entry_a, entry_b, winner_entry=entry_b)
 
 
+def _record_outcome(entity, score: float) -> None:
+    """entity is an Agent, Owner, or CategoryRating — all three share the
+    same wins/losses/draws attribute names on purpose, so this one helper
+    works for every rating this module tracks."""
+    if score == 1.0:
+        entity.wins += 1
+    elif score == 0.0:
+        entity.losses += 1
+    else:
+        entity.draws += 1
+
+
+def _get_or_create_category_rating(
+    db: Session, *, agent_id: uuid.UUID | None, human_owner_id: uuid.UUID | None, category: str
+) -> CategoryRating:
+    query = select(CategoryRating).where(CategoryRating.category == category)
+    query = query.where(
+        CategoryRating.agent_id == agent_id
+        if agent_id is not None
+        else CategoryRating.human_owner_id == human_owner_id
+    )
+    row = db.execute(query).scalar_one_or_none()
+    if row is None:
+        row = CategoryRating(agent_id=agent_id, human_owner_id=human_owner_id, category=category)
+        db.add(row)
+        db.flush()
+    return row
+
+
 def apply_resolution(
     db: Session,
     duel: Duel,
@@ -403,19 +434,25 @@ def apply_resolution(
     *,
     winner_entry: DuelEntry | None,
 ) -> None:
-    """Resolves a duel between any mix of agent and human entries. A human
-    side has no Elo rating of its own — HUMAN_VIRTUAL_RATING stands in for
-    it so the agent side's own rating still updates meaningfully; humans
-    don't get a rating, wins, or losses recorded anywhere (see
-    docs/decisions.md, 2026-10-31)."""
+    """Resolves a duel between any mix of agent and human entries. Updates
+    two independent ratings per side: one overall (Agent.rating /
+    Owner.rating) and one for this duel's specific category
+    (CategoryRating) — both elo, both using the same K-factor, neither
+    derived from the other. Humans get a real rating here, not the old
+    fixed HUMAN_VIRTUAL_RATING stand-in — see docs/decisions.md,
+    2026-11-02 (supersedes 2026-10-31)."""
     settings = get_settings()
     agent_a = db.get(Agent, entry_a.agent_id) if entry_a.agent_id else None
     agent_b = db.get(Agent, entry_b.agent_id) if entry_b.agent_id else None
+    owner_a = db.get(Owner, entry_a.human_owner_id) if entry_a.human_owner_id else None
+    owner_b = db.get(Owner, entry_b.human_owner_id) if entry_b.human_owner_id else None
     if agent_a is None and agent_b is None:
         return  # shouldn't happen — a duel is always created by an agent
 
-    rating_a = agent_a.rating if agent_a else HUMAN_VIRTUAL_RATING
-    rating_b = agent_b.rating if agent_b else HUMAN_VIRTUAL_RATING
+    side_a = agent_a or owner_a
+    side_b = agent_b or owner_b
+    rating_a = side_a.rating if side_a else HUMAN_VIRTUAL_RATING
+    rating_b = side_b.rating if side_b else HUMAN_VIRTUAL_RATING
 
     if winner_entry is None:
         score_a = 0.5
@@ -423,34 +460,49 @@ def apply_resolution(
         score_a = 1.0
     else:
         score_a = 0.0
+    score_b = 1.0 - score_a
 
     k_factor = settings.KINFOLD_ELO_K_FACTOR
     delta_a = elo_delta(rating_a, rating_b, score_a=score_a, k_factor=k_factor)
-    delta_b = elo_delta(rating_b, rating_a, score_a=1.0 - score_a, k_factor=k_factor)
+    delta_b = elo_delta(rating_b, rating_a, score_a=score_b, k_factor=k_factor)
 
-    if agent_a:
-        agent_a.rating += delta_a
-    if agent_b:
-        agent_b.rating += delta_b
+    if side_a:
+        side_a.rating += delta_a
+        _record_outcome(side_a, score_a)
+    if side_b:
+        side_b.rating += delta_b
+        _record_outcome(side_b, score_b)
+
+    # The per-category rating is a second, independent elo run — its own
+    # ratings in, its own deltas out. A side with no overall rating here
+    # (shouldn't happen — every entry is either an agent or a human owner)
+    # simply gets no category rating either.
+    if side_a and side_b:
+        cat_a = _get_or_create_category_rating(
+            db,
+            agent_id=agent_a.id if agent_a else None,
+            human_owner_id=owner_a.id if owner_a else None,
+            category=duel.category,
+        )
+        cat_b = _get_or_create_category_rating(
+            db,
+            agent_id=agent_b.id if agent_b else None,
+            human_owner_id=owner_b.id if owner_b else None,
+            category=duel.category,
+        )
+        cat_delta_a = elo_delta(cat_a.rating, cat_b.rating, score_a=score_a, k_factor=k_factor)
+        cat_delta_b = elo_delta(cat_b.rating, cat_a.rating, score_a=score_b, k_factor=k_factor)
+        cat_a.rating += cat_delta_a
+        cat_b.rating += cat_delta_b
+        _record_outcome(cat_a, score_a)
+        _record_outcome(cat_b, score_b)
 
     if winner_entry is None:
-        if agent_a:
-            agent_a.draws += 1
-        if agent_b:
-            agent_b.draws += 1
         duel.is_draw = True
     elif winner_entry is entry_a:
-        if agent_a:
-            agent_a.wins += 1
-        if agent_b:
-            agent_b.losses += 1
         duel.winner_agent_id = agent_a.id if agent_a else None
         duel.winner_human_owner_id = entry_a.human_owner_id
     else:
-        if agent_b:
-            agent_b.wins += 1
-        if agent_a:
-            agent_a.losses += 1
         duel.winner_agent_id = agent_b.id if agent_b else None
         duel.winner_human_owner_id = entry_b.human_owner_id
 
@@ -480,6 +532,11 @@ def apply_resolution(
             "agent_a_rating_delta": delta_a,
             "agent_b_id": str(agent_b.id) if agent_b else None,
             "agent_b_rating_delta": delta_b,
+            "human_a_owner_id": str(owner_a.id) if owner_a else None,
+            "human_a_rating_delta": delta_a if owner_a else None,
+            "human_b_owner_id": str(owner_b.id) if owner_b else None,
+            "human_b_rating_delta": delta_b if owner_b else None,
+            "category": duel.category,
         },
     )
     db.commit()

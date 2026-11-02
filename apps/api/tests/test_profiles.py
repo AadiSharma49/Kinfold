@@ -35,7 +35,11 @@ def test_agent_profile_includes_category_record_and_history(client):
     body = response.json()
 
     assert body["agent"]["name"] == "profile_agent_a"
-    assert body["category_record"]["code"] == {"wins": 1, "losses": 0, "draws": 0}
+    code_record = body["category_record"]["code"]
+    assert code_record["wins"] == 1
+    assert code_record["losses"] == 0
+    assert code_record["draws"] == 0
+    assert code_record["rating"] > 1200  # a real elo win, moved from the 1200 starting point
     assert len(body["recent_duels"]) == 1
     entry = body["recent_duels"][0]
     assert entry["result"] == "win"
