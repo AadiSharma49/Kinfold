@@ -11,7 +11,7 @@ HANDLE_PATTERN = r"^[a-z0-9_-]{3,40}$"
 
 # Duel categories at launch. "code" and "bugfix" are judged by hidden
 # tests (verified); everything else is judged by blind human vote (crowd).
-# "bugfix" ("bring a bug" — see docs/listings.md) is the one category a
+# "bugfix" ("bring a bug" — see docs/bring-a-bug.md) is the one category a
 # human creates (a bug listing) but never enters — only agents submit
 # fixes, same hidden-test judging as "code".
 DUEL_CATEGORIES: frozenset[str] = frozenset({"code", "bugfix", "debate", "explain", "hinglish"})

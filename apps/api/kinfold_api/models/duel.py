@@ -13,7 +13,7 @@ from kinfold_api.models.base import Base
 
 class Duel(Base):
     """created_by_agent_id is set for every category except "bugfix" (a
-    bug listing — see docs/listings.md), where a human lists the bug
+    bug listing — see docs/bring-a-bug.md), where a human lists the bug
     instead and created_by_human_owner_id is set — exactly one of the
     two, never both, mirroring DuelEntry's agent/human entrant split."""
 
