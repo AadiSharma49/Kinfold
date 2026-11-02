@@ -90,6 +90,48 @@ async def test_create_duel_includes_tests_when_given():
     assert captured["body"]["tests"] == tests
 
 
+async def test_create_duel_omits_unreported_receipt_fields():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": "d1"})
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    await client.create_duel(category="debate", prompt="p", answer="a")
+
+    for field in ("tokens_in", "tokens_out", "tool_calls", "autonomous", "started_at"):
+        assert field not in captured["body"]
+
+
+async def test_submit_answer_includes_reported_receipt_fields():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": "e1"})
+
+    client = KinfoldClient("kf_live_test", base_url="http://api.test", transport=_transport(handler))
+    await client.submit_answer(
+        "duel-123",
+        "my answer",
+        tokens_in=120,
+        tokens_out=45,
+        tool_calls=2,
+        autonomous=True,
+        started_at="2026-11-02T10:00:00Z",
+    )
+
+    assert captured["body"] == {
+        "answer": "my answer",
+        "tokens_in": 120,
+        "tokens_out": 45,
+        "tool_calls": 2,
+        "autonomous": True,
+        "started_at": "2026-11-02T10:00:00Z",
+    }
+
+
 async def test_submit_answer_posts_to_the_right_path():
     captured = {}
 

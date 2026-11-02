@@ -31,6 +31,15 @@ export type DuelEntry = {
   agent_id: string | null;
   agent_name: string | null;
   agent_is_house: boolean | null;
+  // The agent's receipt. model_name and the agent-reported fields are
+  // self-declared, never verified; latency_ms is measured by Kinfold's
+  // own server clock. Any field can be null — not reported, not zero.
+  agent_model_name: string | null;
+  receipt_tokens_in: number | null;
+  receipt_tokens_out: number | null;
+  receipt_tool_calls: number | null;
+  receipt_autonomous: boolean | null;
+  receipt_latency_ms: number | null;
   human_owner_handle: string | null;
   human_time_taken_seconds: number | null;
   human_declared_ai_tools: string | null;

@@ -52,6 +52,56 @@ def test_export_tags_human_vs_agent_and_scrubs_pii(client, db_session, tmp_path)
     assert manifest.pair_count >= 1
 
 
+def test_export_includes_the_winning_agent_receipt(client, db_session, tmp_path):
+    _, owner_a_key = signup_owner(client, "owner_dataexport_receipt_a")
+    _, owner_b_key = signup_owner(client, "owner_dataexport_receipt_b")
+    _, agent_a_key = create_agent(
+        client, owner_a_key, "dataexport_receipt_agent_a", model_name="receipt-model-a"
+    )
+    _, agent_b_key = create_agent(client, owner_b_key, "dataexport_receipt_agent_b")
+
+    duel = client.post(
+        "/v1/duels",
+        json={
+            "category": "debate",
+            "prompt": "Receipts in the export.",
+            "answer": "A's answer",
+            "tokens_in": 10,
+            "tokens_out": 20,
+            "tool_calls": 1,
+            "autonomous": False,
+        },
+        headers={"Authorization": f"Bearer {agent_a_key}"},
+    ).json()
+    entry_a_id = client.get(f"/v1/duels/{duel['id']}")  # not revealed yet, just sanity
+    opponent = client.post(
+        f"/v1/duels/{duel['id']}/entries",
+        json={"answer": "B's answer"},
+        headers={"Authorization": f"Bearer {agent_b_key}"},
+    ).json()
+    assert entry_a_id.status_code == 200
+
+    # Resolve with agent A's entry winning.
+    entries = client.get(f"/v1/duels/{duel['id']}").json()["entries"]
+    # Blind pre-resolution, so vote using whichever slot-1 id we already
+    # know belongs to agent A's submission (the duel's own first entry).
+    winning_entry_id = next(e["id"] for e in entries if e["slot"] == 1)
+    assert winning_entry_id != opponent["id"]
+    _resolve_with_human_votes(client, duel["id"], winning_entry_id)
+
+    out = tmp_path / "pairs.jsonl"
+    write_export(db_session, out)
+    pairs = [json.loads(line) for line in out.read_text().splitlines()]
+    match = next(p for p in pairs if p["duel_id"] == duel["id"])
+
+    assert match["chosen_receipt"]["model_name"] == "receipt-model-a"
+    assert match["chosen_receipt"]["tokens_in"] == 10
+    assert match["chosen_receipt"]["tokens_out"] == 20
+    assert match["chosen_receipt"]["tool_calls"] == 1
+    assert match["chosen_receipt"]["autonomous"] is False
+    assert match["rejected_receipt"]["tokens_in"] is None
+
+
 def test_export_skips_duels_with_a_trap_entry(client, db_session, tmp_path):
     _, owner_a_key = signup_owner(client, "owner_dataexport_trap_a")
     _, owner_trap_key = signup_owner(client, "owner_dataexport_trap_t")

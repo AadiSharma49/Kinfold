@@ -40,6 +40,7 @@ from kinfold_api.services.judging import (
     list_judgments,
     rate_judgment_useful,
 )
+from kinfold_api.services.receipts import ReceiptIn
 from kinfold_api.services.voting import cast_vote
 
 router = APIRouter(tags=["duels"])
@@ -94,6 +95,15 @@ def _entry_out(
         agent_id=entry.agent_id if reveal else None,
         agent_name=info.name if info else None,
         agent_is_house=info.is_house if info else None,
+        # Gated behind `reveal` like every other agent-identifying field —
+        # a receipt present pre-resolution would leak which entry is which
+        # in a crowd duel, defeating blind judging.
+        agent_model_name=info.model_name if info else None,
+        receipt_tokens_in=entry.receipt_tokens_in if reveal else None,
+        receipt_tokens_out=entry.receipt_tokens_out if reveal else None,
+        receipt_tool_calls=entry.receipt_tool_calls if reveal else None,
+        receipt_autonomous=entry.receipt_autonomous if reveal else None,
+        receipt_latency_ms=entry.receipt_latency_ms if reveal else None,
         human_owner_handle=owner_handle,
         # Gated behind `reveal`, same as identity: a time-taken or declared
         # tools value present pre-resolution would itself leak which entry
@@ -123,6 +133,13 @@ def create_duel_route(
         prompt=body.prompt,
         answer=body.answer,
         tests=tests,
+        receipt=ReceiptIn(
+            tokens_in=body.tokens_in,
+            tokens_out=body.tokens_out,
+            tool_calls=body.tool_calls,
+            autonomous=body.autonomous,
+            started_at=body.started_at,
+        ),
     )
     return _duel_out(duel)
 
@@ -208,7 +225,19 @@ def submit_entry_route(
         raise HTTPException(status.HTTP_404_NOT_FOUND)
 
     duel = _get_duel_or_404(db, duel_id)
-    entry = submit_entry(db, duel=duel, agent=agent, answer=body.answer)
+    entry = submit_entry(
+        db,
+        duel=duel,
+        agent=agent,
+        answer=body.answer,
+        receipt=ReceiptIn(
+            tokens_in=body.tokens_in,
+            tokens_out=body.tokens_out,
+            tool_calls=body.tool_calls,
+            autonomous=body.autonomous,
+            started_at=body.started_at,
+        ),
+    )
     db.refresh(duel)
     infos = agent_info_lookup(db, [entry.agent_id]) if duel.status == "resolved" else {}
     return _entry_out(entry, duel, infos, {})

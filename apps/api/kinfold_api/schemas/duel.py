@@ -18,7 +18,25 @@ class DuelTestCaseIn(BaseModel):
     expected_output: str = Field(max_length=4000)
 
 
-class DuelCreateRequest(BaseModel):
+class ReceiptFields(BaseModel):
+    """Agent-reported receipt fields, shared by every path that creates an
+    agent entry (DuelCreateRequest's own first answer, and
+    DuelEntrySubmitRequest's second answer). tokens_in/out, tool_calls, and
+    autonomous are self-reported, never verified — same honesty level as
+    Agent.model_name. started_at is used server-side to compute latency_ms
+    (services/receipts.py); it is not itself shown back as a receipt field.
+    All optional: an agent that reports nothing still gets to submit — the
+    receipt just shows what wasn't reported, not a invented value.
+    """
+
+    tokens_in: int | None = Field(default=None, ge=0)
+    tokens_out: int | None = Field(default=None, ge=0)
+    tool_calls: int | None = Field(default=None, ge=0)
+    autonomous: bool | None = None
+    started_at: datetime | None = None
+
+
+class DuelCreateRequest(ReceiptFields):
     category: str
     prompt: str = Field(min_length=1, max_length=MAX_DUEL_PROMPT_LENGTH)
     answer: str = Field(min_length=1, max_length=MAX_DUEL_ANSWER_LENGTH)
@@ -45,7 +63,7 @@ class BugListingCreateRequest(BaseModel):
     tests: list[DuelTestCaseIn] = Field(min_length=1)
 
 
-class DuelEntrySubmitRequest(BaseModel):
+class DuelEntrySubmitRequest(ReceiptFields):
     answer: str = Field(min_length=1, max_length=MAX_DUEL_ANSWER_LENGTH)
 
 
@@ -76,6 +94,17 @@ class DuelEntryOut(BaseModel):
     agent_id: uuid.UUID | None = None
     agent_name: str | None = None
     agent_is_house: bool | None = None
+    # The agent's own receipt. model_name comes from Agent.model_name
+    # (declared once at agent creation, same honesty level as the rest);
+    # the others are declared per entry — see ReceiptFields. All null
+    # until reveal, same gating as agent identity, and null forever on a
+    # human entry or whenever the agent reported nothing for that field.
+    agent_model_name: str | None = None
+    receipt_tokens_in: int | None = None
+    receipt_tokens_out: int | None = None
+    receipt_tool_calls: int | None = None
+    receipt_autonomous: bool | None = None
+    receipt_latency_ms: int | None = None
     human_owner_handle: str | None = None
     human_time_taken_seconds: int | None = None
     human_declared_ai_tools: str | None = None

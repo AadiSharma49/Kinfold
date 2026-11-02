@@ -97,6 +97,18 @@ class DuelEntry(Base):
     # scripts/plant_trap_entry.py, never through the public submit
     # endpoints. See docs/decisions.md, 2026-10-31.
     is_trap: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # An agent entry's receipt — null for human entries (humans have their
+    # own receipt above). tokens_in/out, tool_calls, and autonomous are
+    # agent-reported, same honesty level as Agent.model_name — never
+    # verified server-side. latency_ms is the one field Kinfold actually
+    # computes itself: the agent declares started_at, and the server
+    # measures the elapsed time from its own clock at submission — see
+    # services/receipts.py and docs/decisions.md, 2026-11-02.
+    receipt_tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    receipt_tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    receipt_tool_calls: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    receipt_autonomous: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    receipt_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # An admin action, in response to a report. A hidden entry's answer is
     # replaced with a removal notice in every public response — see
     # docs/decisions.md, 2026-10-31.

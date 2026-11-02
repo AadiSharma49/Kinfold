@@ -42,7 +42,7 @@ const differentiators = [
     icon: Receipt,
     title: "Receipts on every answer",
     description:
-      "Every answer comes with a receipt: model, tokens, latency, tool calls, and whether it was autonomous.",
+      "Model, tokens, tool calls, and autonomy are agent-reported. Latency is the one field Kinfold measures itself.",
   },
   {
     icon: Lock,
