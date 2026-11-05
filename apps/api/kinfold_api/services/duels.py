@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from kinfold_api.config import get_settings
@@ -29,6 +29,17 @@ def _ensure_agent_active(agent: Agent) -> None:
     can't create or join duels. See docs/decisions.md, 2026-10-31."""
     if agent.is_disabled:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This agent has been disabled.")
+
+
+def _ensure_test_cap(tests: list[tuple[str, str]]) -> None:
+    """Each hidden test is run in a fresh sandbox container, so the creator
+    supplied list is capped — see KINFOLD_MAX_TESTS_PER_DUEL."""
+    limit = get_settings().KINFOLD_MAX_TESTS_PER_DUEL
+    if len(tests) > limit:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"A duel can have at most {limit} hidden tests.",
+        )
 
 
 def _ensure_sandbox_access(agent: Agent) -> None:
@@ -61,6 +72,7 @@ def create_duel(
     _ensure_agent_active(creator_agent)
     if category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(creator_agent)
+        _ensure_test_cap(tests)
     receipt = receipt or ReceiptIn()
 
     duel = Duel(
@@ -117,6 +129,7 @@ def create_bug_listing(
     case(s) that currently fail. No entry is created here; two agents
     submit competing fixes via submit_entry, same hidden-test judging as
     a "code" duel. The listing owner never enters their own listing."""
+    _ensure_test_cap(tests)
     duel = Duel(
         category="bugfix",
         status="open",
@@ -164,6 +177,18 @@ def _submit_bugfix_entry(
     ).scalars().all()
     if any(e.agent_id == agent.id for e in existing):
         raise HTTPException(status.HTTP_409_CONFLICT, "This agent already submitted a fix.")
+    # Two agents run by the same owner must not fill both sides of a
+    # listing — otherwise one owner controls the result and can farm Elo.
+    sibling = db.execute(
+        select(DuelEntry.id)
+        .join(Agent, Agent.id == DuelEntry.agent_id)
+        .where(DuelEntry.duel_id == duel.id, Agent.owner_id == agent.owner_id)
+    ).first()
+    if sibling is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Agents run by the same owner can't compete in the same listing.",
+        )
     taken_slots = {e.slot for e in existing}
     if 1 not in taken_slots:
         slot = 1
@@ -186,6 +211,7 @@ def _submit_bugfix_entry(
     db.add(entry)
     if slot == 2:
         duel.status = "judging"
+        duel.judging_started_at = datetime.now(UTC)
     db.flush()
 
     append_event(
@@ -220,6 +246,10 @@ def submit_entry(
     just internally known to be deliberately bad, for checking whether
     judges actually discriminate quality."""
     _ensure_agent_active(agent)
+    # Serialize joins on one duel. Without this, two agents could both see
+    # "open" and race for slot 2 (the unique constraint would turn the
+    # loser into a 500 instead of a clean 409).
+    duel = db.execute(select(Duel).where(Duel.id == duel.id).with_for_update()).scalar_one()
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
     receipt = receipt or ReceiptIn()
@@ -233,6 +263,12 @@ def submit_entry(
 
     if agent.id == duel.created_by_agent_id:
         raise HTTPException(status.HTTP_409_CONFLICT, "An agent can't duel itself.")
+    creator = db.get(Agent, duel.created_by_agent_id)
+    if creator is not None and creator.owner_id == agent.owner_id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Agents run by the same owner can't duel each other.",
+        )
     if duel.category in VERIFIED_CATEGORIES:
         _ensure_sandbox_access(agent)
 
@@ -250,6 +286,7 @@ def submit_entry(
     )
     db.add(entry)
     duel.status = "judging"
+    duel.judging_started_at = datetime.now(UTC)
     db.flush()
 
     append_event(
@@ -325,6 +362,7 @@ def submit_human_entry(
     self-reported, same as the answer text itself, never verified."""
     if duel.category not in CROWD_CATEGORIES:
         raise HTTPException(status.HTTP_409_CONFLICT, "Only crowd duels are open to a human entry.")
+    duel = db.execute(select(Duel).where(Duel.id == duel.id).with_for_update()).scalar_one()
     if duel.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel is no longer open for entries.")
 
@@ -350,6 +388,7 @@ def submit_human_entry(
     )
     db.add(entry)
     duel.status = "judging"
+    duel.judging_started_at = datetime.now(UTC)
     db.flush()
 
     append_event(
@@ -507,6 +546,15 @@ def apply_resolution(
     derived from the other. Humans get a real rating here, not the old
     fixed HUMAN_VIRTUAL_RATING stand-in — see docs/decisions.md,
     2026-11-02 (supersedes 2026-10-31)."""
+    # Only a duel that is actually awaiting a result may be resolved, and
+    # the check must see committed state from other transactions. Lock the
+    # row and re-read it here, at the point where the result is applied:
+    # two crowd votes crossing the threshold, or an admin retry racing a
+    # submission, both reach this function. The second call waits for the
+    # lock, sees "resolved", and changes nothing.
+    duel = db.execute(select(Duel).where(Duel.id == duel.id).with_for_update()).scalar_one()
+    if duel.status != "judging":
+        return
     # A hidden entry (admin moderation) must not move ratings. If a
     # moderator hid an entry before the duel resolved, leave the duel
     # unresolved rather than inventing a result from content that was
@@ -625,6 +673,41 @@ def apply_resolution(
         },
     )
     db.commit()
+
+
+def expire_stale_duels(db: Session) -> int:
+    """Move duels that have been judging for too long to "expired".
+
+    No rating change: an expiry is not a result, it just stops the ladder
+    waiting forever on a dead sandbox or a vote threshold that will never
+    be reached. Admins can reset and retry an expired duel. Uses
+    skip_locked so two readers can expire different rows without queueing
+    behind each other."""
+    cutoff = datetime.now(UTC) - timedelta(minutes=get_settings().KINFOLD_DUEL_EXPIRY_MINUTES)
+    duels = db.execute(
+        select(Duel)
+        .where(
+            Duel.status == "judging",
+            func.coalesce(Duel.judging_started_at, Duel.created_at) < cutoff,
+        )
+        .with_for_update(skip_locked=True)
+    ).scalars().all()
+    if not duels:
+        return 0
+
+    now = datetime.now(UTC)
+    for duel in duels:
+        duel.status = "expired"
+        duel.expired_at = now
+        append_event(
+            db,
+            type="duel.expired",
+            agent_id=None,
+            owner_id=None,
+            payload={"duel_id": str(duel.id)},
+        )
+    db.commit()
+    return len(duels)
 
 
 def winning_entry_id(duel: Duel, entries: list[DuelEntry]) -> uuid.UUID | None:

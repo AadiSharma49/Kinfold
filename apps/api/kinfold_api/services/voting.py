@@ -17,6 +17,12 @@ from kinfold_api.services.events import append_event
 def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> Vote:
     if duel.category not in CROWD_CATEGORIES:
         raise HTTPException(status.HTTP_409_CONFLICT, "Code duels are judged by tests, not votes.")
+
+    # Take the duel row lock before accepting the vote. Votes on one duel
+    # are serialized against each other and against resolution, so a vote
+    # can't slip in after the threshold was reached and two winning votes
+    # can't both apply a result.
+    duel = db.execute(select(Duel).where(Duel.id == duel.id).with_for_update()).scalar_one()
     if duel.status != "judging":
         raise HTTPException(status.HTTP_409_CONFLICT, "This duel isn't open for voting.")
 
@@ -57,8 +63,29 @@ def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> 
         owner_id=voter.id,
         payload={"duel_id": str(duel.id), "chosen_entry_id": str(chosen.id)},
     )
+    resolve_crowd_duel_if_ready(db, duel)
+    # Commits the vote when the duel hasn't resolved yet; a no-op when
+    # apply_resolution already committed both the vote and the result.
     db.commit()
     db.refresh(vote)
+
+    return vote
+
+
+def resolve_crowd_duel_if_ready(db: Session, duel: Duel) -> bool:
+    """Resolve a crowd duel if it has two entries and enough votes.
+    Returns whether a resolution was applied. The caller is responsible
+    for holding a row lock on the duel when a concurrent vote could be
+    resolving it too."""
+    if duel.status != "judging":
+        return False
+    entries = (
+        db.execute(select(DuelEntry).where(DuelEntry.duel_id == duel.id).order_by(DuelEntry.slot))
+        .scalars()
+        .all()
+    )
+    if len(entries) != 2:
+        return False
 
     settings = get_settings()
     vote_count = db.execute(
@@ -66,10 +93,11 @@ def cast_vote(db: Session, *, duel: Duel, voter: Owner, entry_id: uuid.UUID) -> 
         .select_from(Vote)
         .where(Vote.duel_id == duel.id, Vote.voter_type == "human")
     ).scalar_one()
-    if vote_count >= settings.KINFOLD_MIN_VOTES_TO_RESOLVE:
-        _resolve_crowd_duel(db, duel, entries)
+    if vote_count < settings.KINFOLD_MIN_VOTES_TO_RESOLVE:
+        return False
 
-    return vote
+    _resolve_crowd_duel(db, duel, entries)
+    return duel.status == "resolved"
 
 
 def _resolve_crowd_duel(db: Session, duel: Duel, entries: list[DuelEntry]) -> None:

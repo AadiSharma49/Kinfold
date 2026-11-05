@@ -18,6 +18,7 @@ from kinfold_api.services.admin import (
     hide_duel,
     hide_entry,
     hide_judgment,
+    retry_duel,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -31,6 +32,16 @@ def hide_duel_route(
     if duel is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     return DuelOut.model_validate(hide_duel(db, duel=duel, admin_owner_id=key.owner_id))
+
+
+@router.post("/duels/{duel_id}/retry", response_model=DuelOut)
+def retry_duel_route(
+    duel_id: uuid.UUID, key: ApiKey = Depends(require_admin_key), db: Session = Depends(get_db)
+) -> DuelOut:
+    duel = db.get(Duel, duel_id)
+    if duel is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    return DuelOut.model_validate(retry_duel(db, duel=duel, admin_owner_id=key.owner_id))
 
 
 @router.post("/entries/{entry_id}/hide", status_code=status.HTTP_204_NO_CONTENT)
