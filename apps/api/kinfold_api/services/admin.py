@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from kinfold_api.models import Agent, ApiKey, Duel, DuelEntry, Vote
+from kinfold_api.services.duels import void_duel_ratings
 from kinfold_api.services.events import append_event
 from kinfold_api.services.keys import revoke_key
 
@@ -35,6 +36,12 @@ def hide_entry(db: Session, *, entry: DuelEntry, admin_owner_id: uuid.UUID) -> D
     if entry.hidden_at is None:
         entry.hidden_at = datetime.now(UTC)
         db.flush()
+        duel = db.get(Duel, entry.duel_id)
+        if duel is not None:
+            # A resolved duel's ratings must not keep depending on content
+            # a moderator has removed. Reverses both sides exactly and
+            # marks the duel voided for profiles/export.
+            void_duel_ratings(db, duel=duel)
         append_event(
             db,
             type="admin.entry_hidden",

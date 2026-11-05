@@ -409,6 +409,72 @@ def _record_outcome(entity, score: float) -> None:
         entity.draws += 1
 
 
+def _reverse_outcome(entity, score: float | None) -> None:
+    """Undo one _record_outcome call. Floors at zero so a double hide (or a
+    legacy row without bookkeeping) can never make a record negative."""
+    if score is None:
+        return
+    if score == 1.0:
+        entity.wins = max(0, entity.wins - 1)
+    elif score == 0.0:
+        entity.losses = max(0, entity.losses - 1)
+    else:
+        entity.draws = max(0, entity.draws - 1)
+
+
+def void_duel_ratings(db: Session, *, duel: Duel) -> bool:
+    """Reverse every rating and record change a settled duel made, because
+    one of its entries has been hidden by a moderator. Returns True if this
+    call did the reversal, False if there was nothing to reverse or it was
+    already done.
+
+    The reversal is exact: apply_resolution stored each side's overall
+    delta, category delta, and outcome on the entry itself, so this never
+    has to recreate elo math from current (possibly moved) ratings. The
+    change is recorded as a new event; the original duel.resolved event is
+    never edited, so the append-only log keeps both facts.
+
+    Public profiles and the dataset export omit duels with
+    ratings_voided_at set, so a hidden entry cannot keep affecting stats.
+    """
+    if duel.status != "resolved" or duel.ratings_voided_at is not None:
+        return False
+
+    entries = db.execute(
+        select(DuelEntry).where(DuelEntry.duel_id == duel.id)
+    ).scalars().all()
+
+    for entry in entries:
+        if entry.rating_delta is None:
+            continue
+        agent = db.get(Agent, entry.agent_id) if entry.agent_id else None
+        owner = db.get(Owner, entry.human_owner_id) if entry.human_owner_id else None
+        side = agent or owner
+        if side is not None:
+            side.rating -= entry.rating_delta
+            _reverse_outcome(side, entry.outcome_score)
+        if entry.category_rating_delta is not None:
+            cat = _get_or_create_category_rating(
+                db,
+                agent_id=agent.id if agent else None,
+                human_owner_id=owner.id if owner else None,
+                category=duel.category,
+            )
+            cat.rating -= entry.category_rating_delta
+            _reverse_outcome(cat, entry.outcome_score)
+
+    duel.ratings_voided_at = datetime.now(UTC)
+    db.flush()
+    append_event(
+        db,
+        type="duel.ratings_voided",
+        agent_id=None,
+        owner_id=None,
+        payload={"duel_id": str(duel.id), "category": duel.category},
+    )
+    return True
+
+
 def _get_or_create_category_rating(
     db: Session, *, agent_id: uuid.UUID | None, human_owner_id: uuid.UUID | None, category: str
 ) -> CategoryRating:
@@ -441,6 +507,16 @@ def apply_resolution(
     derived from the other. Humans get a real rating here, not the old
     fixed HUMAN_VIRTUAL_RATING stand-in — see docs/decisions.md,
     2026-11-02 (supersedes 2026-10-31)."""
+    # A hidden entry (admin moderation) must not move ratings. If a
+    # moderator hid an entry before the duel resolved, leave the duel
+    # unresolved rather than inventing a result from content that was
+    # removed. A post-resolution hide is reversed exactly by
+    # void_duel_ratings below.
+    if entry_a.hidden_at is not None or entry_b.hidden_at is not None:
+        return
+    if duel.ratings_voided_at is not None:
+        return
+
     settings = get_settings()
     agent_a = db.get(Agent, entry_a.agent_id) if entry_a.agent_id else None
     agent_b = db.get(Agent, entry_b.agent_id) if entry_b.agent_id else None
@@ -473,6 +549,13 @@ def apply_resolution(
         side_b.rating += delta_b
         _record_outcome(side_b, score_b)
 
+    # Remember exactly what was applied so an admin hiding this entry
+    # later can reverse it without guessing — see void_duel_ratings.
+    entry_a.rating_delta = delta_a
+    entry_a.outcome_score = score_a
+    entry_b.rating_delta = delta_b
+    entry_b.outcome_score = score_b
+
     # The per-category rating is a second, independent elo run — its own
     # ratings in, its own deltas out. A side with no overall rating here
     # (shouldn't happen — every entry is either an agent or a human owner)
@@ -496,6 +579,8 @@ def apply_resolution(
         cat_b.rating += cat_delta_b
         _record_outcome(cat_a, score_a)
         _record_outcome(cat_b, score_b)
+        entry_a.category_rating_delta = cat_delta_a
+        entry_b.category_rating_delta = cat_delta_b
 
     if winner_entry is None:
         duel.is_draw = True

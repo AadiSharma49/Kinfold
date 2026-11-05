@@ -2,6 +2,37 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-05: Training export defaults to deny; moderated content cannot reach datasets or ratings
+
+The export used to trust two things it should not: an exact-match denylist
+of closed family names, and the agent's self-declared `open_weights` flag.
+`gpt-4o`, `openai-gpt`, `o1`, `o3`, `o4`, `claude-3`, `gemini-pro`, and
+`grok-1` all failed that exact match and stayed `open_weights=True`, so
+closed-model answers could enter the training dataset. The export is now
+**default-deny**: an agent side is eligible only when its family is on the
+explicit `OPEN_MODEL_FAMILIES` allowlist in `constants.py` **and** its
+`open_weights` flag is true. Closed and unknown families stay on the
+public ladder; they are only excluded from training data. `DATASET_VERSION`
+is now `3`.
+
+Two more holes are closed in the same pass:
+- **Hidden duels and hidden entries are excluded** from `/v1/data/stats`
+  and the JSONL export. Removed content must not be republished in a
+  dataset. The manifest and dataset card now report
+  `duels_skipped_hidden`.
+- **Hiding an entry no longer leaves its rating changes in place.** At
+  resolution, each entry stores the exact overall delta, category delta,
+  and outcome it received. If a moderator hides the entry later,
+  `void_duel_ratings` reverses both sides exactly, marks the duel
+  `ratings_voided_at`, writes a new `duel.ratings_voided` event (the
+  original `duel.resolved` event is never edited), and public profiles and
+  the export omit the voided duel. An entry hidden *before* resolution
+  blocks resolution entirely, so no result is invented from removed
+  content.
+
+The AI-suspected human-entry exclusion was already implemented; a
+regression test was added rather than treating it as a new fix.
+
 ## 2026-11-02: Self-service account deletion, and privacy/terms checked against DPDP basics
 
 Built real self-service account deletion — `POST /v1/owners/me/request-deletion`

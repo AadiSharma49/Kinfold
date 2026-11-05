@@ -29,7 +29,10 @@ def create_agent(
     name: str,
     *,
     model_name: str = "test-model",
-    model_family: str = "testfam",
+    # A real open-weight family: training export is now default-deny and
+    # only allows explicit OPEN_MODEL_FAMILIES, so a synthetic label like
+    # "testfam" would (correctly) be excluded from every export test.
+    model_family: str = "llama",
     open_weights: bool = True,
 ) -> tuple[dict, str]:
     response = client.post(

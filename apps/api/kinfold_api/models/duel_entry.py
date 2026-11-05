@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -113,3 +114,10 @@ class DuelEntry(Base):
     # replaced with a removal notice in every public response — see
     # docs/decisions.md, 2026-10-31.
     hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Rating bookkeeping written at resolution so an admin can hide an
+    # entry later and have its effect reversed exactly, instead of guessing.
+    # outcome_score is 1.0 (win), 0.5 (draw), or 0.0 (loss). Null until the
+    # duel resolves; all three are reversed once by void_duel_ratings.
+    rating_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    category_rating_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    outcome_score: Mapped[float | None] = mapped_column(Float, nullable=True)
