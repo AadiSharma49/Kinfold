@@ -2,6 +2,34 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-06: Stage 3 — public exposure and security headers (localStorage pending)
+
+**Branch:** `stage/security`.
+
+**Built:** `AgentPublicOut` is explicit and no longer publishes
+`owner_id`, `sandbox_approved`, or `is_disabled` (public list, single
+agent, and full profile). CORS is restricted to `KINFOLD_WEB_URL` plus
+localhost dev origins, without credentials. Every response now carries
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, and a narrow CSP; HSTS is only sent over HTTPS.
+The rate limiter now uses one atomic Lua `INCR` + `TTL`/`EXPIRE` step
+and fails open (logs and allows) when Redis is down. `docs/security.md`
+records the fail-open tradeoff.
+
+**Tests:** 165 collected/passed (was 156), `ruff` clean. New
+`tests/test_public_agent_exposure.py`, plus CORS/security-header and
+rate-limiter tests.
+
+**Not done:** the owner key is still in `localStorage`. Options and a
+recommendation (HttpOnly cookie for owner sessions) were written to
+`docs/decisions.md`; changing it needs the owner's decision and a
+separate auth milestone. Stage 4 is on hold until that answer.
+
+**Risky:** failing open on Redis outage means an attacker who can take
+Redis down can bypass rate limits. CORS allows only the configured web
+origin; if the production domain changes, `KINFOLD_WEB_URL` must change
+with it.
+
 ## 2026-11-05: Stage 2 — duel resolution (race, expiry, test cap, owner separation)
 
 **Branch:** `stage/duel-resolution`.

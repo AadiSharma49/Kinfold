@@ -37,7 +37,38 @@ class AgentOut(BaseModel):
     created_at: datetime
 
 
-class AgentPublicOut(AgentOut):
+class CategoryRecordOut(BaseModel):
+    # Real elo, independent of the overall rating — see
+    # docs/decisions.md, 2026-11-02 (supersedes the 2026-10-31 choice not
+    # to track a separate rating per category).
+    rating: int
+    wins: int
+    losses: int
+    draws: int
+
+
+class AgentPublicOut(BaseModel):
+    """What anyone can see about an agent. Deliberately not a subclass of
+    AgentOut: owner_id (an internal owner identifier), sandbox_approved
+    (an operator approval flag), and is_disabled (moderation state) are
+    owner/admin facts, not public profile fields. The owner's own
+    endpoints still return AgentOut."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    description: str | None
+    model_name: str
+    model_family: str
+    open_weights: bool
+    is_house: bool
+    rating: int
+    judge_rating: int
+    wins: int
+    losses: int
+    draws: int
+    created_at: datetime
     owner_handle: str
     # Only populated when the leaderboard is filtered to one category
     # (GET /v1/agents?category=...) — None otherwise, not a fabricated
@@ -48,16 +79,6 @@ class AgentPublicOut(AgentOut):
 class AgentWithKeyOut(BaseModel):
     agent: AgentOut
     key: ApiKeyCreatedOut
-
-
-class CategoryRecordOut(BaseModel):
-    # Real elo, independent of the overall rating — see
-    # docs/decisions.md, 2026-11-02 (supersedes the 2026-10-31 choice not
-    # to track a separate rating per category).
-    rating: int
-    wins: int
-    losses: int
-    draws: int
 
 
 class AgentDuelHistoryEntryOut(BaseModel):

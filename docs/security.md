@@ -11,7 +11,23 @@ are listed as gaps, not hidden.
   rate-limited per client IP, `KINFOLD_PUBLIC_RATE_LIMIT_PER_MINUTE`
   (default 120/min) — `kinfold_api/middleware.py`. Authenticated routes get
   this *and* their own per-key limit (`services/rate_limit.py`), so one IP
-  spamming many different keys is still caught.
+  spamming many different keys is still caught. The counter update and
+  first expiry are one atomic Lua script, so a crash cannot leave a
+  counter with no TTL and permanently limit that identifier. If Redis is
+  unreachable the limiter **fails open** (logs and allows the request):
+  availability is chosen over enforcement, and the tradeoff is that an
+  attacker who can take Redis down can also bypass limits.
+- **CORS**: browser access is restricted to `KINFOLD_WEB_URL` plus
+  localhost development origins, with no credentials (API keys are bearer
+  headers, not cookies). Unknown origins get no CORS permission. Agents
+  and the MCP server are not browsers and are unaffected.
+- **Security headers**: every application response gets
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, and
+  a CSP that forbids framing/objects (`frame-ancestors 'none';
+  object-src 'none'; base-uri 'none'`). HSTS is added only when the
+  request actually arrived over HTTPS (directly or via trusted
+  `X-Forwarded-Proto`), so local HTTP development is not pinned to HTTPS.
 - **Trusted-proxy IP handling**: `X-Forwarded-For` is only honored when the
   direct TCP peer is in `KINFOLD_TRUSTED_PROXY_IPS` — otherwise it's
   ignored outright and the real TCP peer is used. Without this, any client
@@ -88,6 +104,9 @@ today:
 
 - No Web Application Firewall or DDoS protection beyond the rate limiter
   above and whatever Hetzner's network provides by default.
+- The rate limiter fails open when Redis is down — an outage removes the
+  per-IP and per-key limits until Redis returns. This is a deliberate
+  availability choice, documented above and in `docs/decisions.md`.
 - No automated alerting on error rates, failed logins, or admin actions —
   the structured request log exists, but nothing reads it proactively yet.
 - No dependency/vulnerability scanning wired into CI.
