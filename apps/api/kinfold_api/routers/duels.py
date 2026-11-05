@@ -30,6 +30,7 @@ from kinfold_api.services.duels import (
     agent_info_lookup,
     create_bug_listing,
     create_duel,
+    expire_stale_duels,
     owner_handle_lookup,
     submit_entry,
     submit_human_entry,
@@ -167,6 +168,7 @@ def list_duels(
     category: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> list[DuelOut]:
+    expire_stale_duels(db)
     query = select(Duel).where(Duel.hidden_at.is_(None)).order_by(Duel.created_at.desc())
     if status_filter is not None:
         query = query.where(Duel.status == status_filter)
@@ -187,6 +189,7 @@ def list_duels(
 
 @router.get("/duels/{duel_id}", response_model=DuelDetailOut)
 def get_duel(duel_id: uuid.UUID, db: Session = Depends(get_db)) -> DuelDetailOut:
+    expire_stale_duels(db)
     duel = _get_duel_or_404(db, duel_id)
     entries = (
         db.execute(select(DuelEntry).where(DuelEntry.duel_id == duel.id).order_by(DuelEntry.slot))

@@ -3,12 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from kinfold_api.constants import VERIFIED_CATEGORIES
 from kinfold_api.models import Agent, ApiKey, Duel, DuelEntry, Vote
-from kinfold_api.services.duels import void_duel_ratings
+from kinfold_api.services.duels import resolve_verified_duel, void_duel_ratings
 from kinfold_api.services.events import append_event
 from kinfold_api.services.keys import revoke_key
+from kinfold_api.services.voting import resolve_crowd_duel_if_ready
 
 # Every function here is an admin action — each writes its own event,
 # separate from (and in addition to) whatever event the underlying change
@@ -51,6 +55,54 @@ def hide_entry(db: Session, *, entry: DuelEntry, admin_owner_id: uuid.UUID) -> D
         db.commit()
         db.refresh(entry)
     return entry
+
+
+def retry_duel(db: Session, *, duel: Duel, admin_owner_id: uuid.UUID) -> Duel:
+    """Re-run resolution for a judging or expired duel.
+
+    An expired duel is put back into "judging" first; it has no rating
+    change to undo because expiry never applies one. A verified duel is
+    re-run against the sandbox, a crowd duel resolves only if it already
+    has enough votes. Nothing here invents a winner: if the duel still
+    can't resolve, it stays pending and the response says so.
+    """
+    # One admin retry at a time; the lock also makes the status checks
+    # below read committed state, not a stale object from the request.
+    duel = db.execute(select(Duel).where(Duel.id == duel.id).with_for_update()).scalar_one()
+    if duel.status == "resolved":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This duel is already resolved.")
+    if duel.status == "open":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "This duel is still waiting for a second entry."
+        )
+
+    previous_status = duel.status
+    if duel.status == "expired":
+        duel.status = "judging"
+        duel.expired_at = None
+        duel.judging_started_at = datetime.now(UTC)
+        db.flush()
+
+    if duel.category in VERIFIED_CATEGORIES:
+        resolve_verified_duel(db, duel)
+        db.refresh(duel)
+    else:
+        resolve_crowd_duel_if_ready(db, duel)
+        db.refresh(duel)
+
+    append_event(
+        db,
+        type="admin.duel_retried",
+        owner_id=admin_owner_id,
+        payload={
+            "duel_id": str(duel.id),
+            "previous_status": previous_status,
+            "status": duel.status,
+        },
+    )
+    db.commit()
+    db.refresh(duel)
+    return duel
 
 
 def hide_judgment(db: Session, *, judgment: Vote, admin_owner_id: uuid.UUID) -> Vote:

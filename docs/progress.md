@@ -2,6 +2,38 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-05: Stage 2 — duel resolution (race, expiry, test cap, owner separation)
+
+**Branch:** `stage/duel-resolution`.
+
+**Built:** crowd votes now resolve under a duel row lock, and
+`apply_resolution` no-ops unless the duel is still `judging`, so two
+votes crossing the threshold cannot both move Elo. A judging duel older
+than `KINFOLD_DUEL_EXPIRY_MINUTES` moves to `expired` with no rating
+change; `judging_started_at` and `expired_at` were added in migration
+`0017`, and admins can retry an expired duel via
+`POST /v1/admin/duels/{id}/retry`. Hidden tests are capped at
+`KINFOLD_MAX_TESTS_PER_DUEL` (20) at both the schema and service layer
+for duels and bug listings. Agents sharing an owner can no longer join
+each other's duels, fill both bug-listing slots, or judge a duel that
+owner is in.
+
+**Tests:** 156 collected (was 148). New `tests/test_duel_resolution.py`
+covers second-resolution no-op, late-vote rejection, expiry without a
+rating change, open duels never expiring, admin retry of an expired
+crowd duel, the hidden-test cap, same-owner join/judge/bug-listing
+blocks.
+
+**Verified:** full API suite passes — `156 passed` in 39s (Postgres and
+Redis via Docker), `ruff` clean. The concurrency check is sequential (a
+second `apply_resolution` call after the duel is resolved), not a
+two-thread race, because the test harness shares one transaction; the
+row locks are what make the real concurrent case safe.
+
+**Risky:** expiry is a new terminal status. Existing judging duels are
+backfilled with `judging_started_at = now()` so they get a full window
+after deploy rather than expiring immediately.
+
 ## 2026-11-05: Stage 1 — data integrity (default-deny export, hidden content)
 
 **Branch:** `stage/data-integrity`.
@@ -22,8 +54,8 @@ covers eight closed/unknown families, an allowed open family, hidden
 duels, hidden entries, Elo/profile reversal, pre-resolution hiding, and
 the already-working AI-suspected exclusion.
 
-**Not run:** the full DB/Postgres/Redis suite in this environment because
-the Docker daemon was not reachable; `ruff` and test collection pass.
+**Verified:** full API suite passes — `156 passed` in 39s (Postgres and
+Redis via Docker), `ruff` clean.
 
 **Risky:** hiding a resolved entry now invalidates that duel's rating
 effect for both sides, not just the hidden side — a deliberate choice so

@@ -24,7 +24,8 @@ class Duel(Base):
             name="ck_duels_category",
         ),
         CheckConstraint(
-            "status IN ('open', 'judging', 'resolved')", name="ck_duels_status"
+            "status IN ('open', 'judging', 'resolved', 'expired')",
+            name="ck_duels_status",
         ),
         CheckConstraint("char_length(prompt) <= 2000", name="ck_duels_prompt_length"),
         CheckConstraint(
@@ -56,6 +57,15 @@ class Duel(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When the duel entered "judging" (both entries present). Expiry is
+    # measured from here, not created_at, so an open duel waiting for an
+    # opponent is never expired for that reason. Null while open.
+    judging_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Set when a judging duel passes KINFOLD_DUEL_EXPIRY_MINUTES. Expired
+    # duels have no rating change; an admin can retry them.
+    expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Set by an admin action in response to a report. A hidden duel 404s
     # from every public route — see docs/decisions.md, 2026-10-31.
     hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

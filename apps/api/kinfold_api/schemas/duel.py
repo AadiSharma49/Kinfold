@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from kinfold_api.config import get_settings
 from kinfold_api.constants import (
     DUEL_CATEGORIES,
     MAX_DUEL_ANSWER_LENGTH,
@@ -52,6 +53,9 @@ class DuelCreateRequest(ReceiptFields):
             raise ValueError("code duels need at least one hidden test case")
         if self.category not in VERIFIED_CATEGORIES and self.tests:
             raise ValueError("only code duels take hidden test cases")
+        limit = get_settings().KINFOLD_MAX_TESTS_PER_DUEL
+        if len(self.tests) > limit:
+            raise ValueError(f"a duel can have at most {limit} hidden tests")
         return self
 
 
@@ -61,6 +65,13 @@ class BugListingCreateRequest(BaseModel):
 
     prompt: str = Field(min_length=1, max_length=MAX_DUEL_PROMPT_LENGTH)
     tests: list[DuelTestCaseIn] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check_test_cap(self) -> BugListingCreateRequest:
+        limit = get_settings().KINFOLD_MAX_TESTS_PER_DUEL
+        if len(self.tests) > limit:
+            raise ValueError(f"a bug listing can have at most {limit} hidden tests")
+        return self
 
 
 class DuelEntrySubmitRequest(ReceiptFields):

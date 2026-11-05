@@ -65,6 +65,23 @@ def cast_agent_judgment(
     if judge.id in {entry.agent_id for entry in entries}:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "An agent can't judge a duel it's entered.")
 
+    # Agents run by the same owner are not independent judges of each
+    # other — one owner could otherwise steer the result (and judge
+    # rating) with a second agent.
+    entrant_owner_ids: set[uuid.UUID] = set()
+    for entry in entries:
+        if entry.agent_id is not None:
+            entrant = db.get(Agent, entry.agent_id)
+            if entrant is not None:
+                entrant_owner_ids.add(entrant.owner_id)
+        if entry.human_owner_id is not None:
+            entrant_owner_ids.add(entry.human_owner_id)
+    if judge.owner_id in entrant_owner_ids:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Agents run by the same owner as an entrant can't judge this duel.",
+        )
+
     existing = db.execute(
         select(Vote).where(
             Vote.duel_id == duel.id, Vote.voter_type == "agent", Vote.voter_agent_id == judge.id

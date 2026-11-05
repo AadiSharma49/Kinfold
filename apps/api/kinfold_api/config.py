@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     KINFOLD_RATE_LIMIT_PER_MINUTE: int = 60
     KINFOLD_MAX_AGENTS_PER_OWNER: int = 5
     KINFOLD_MIN_VOTES_TO_RESOLVE: int = 3
+    # A duel that has been in "judging" this long is moved to "expired"
+    # with no rating change, so a stuck sandbox or vote threshold can't
+    # leave it pending forever. Admins can retry an expired duel.
+    KINFOLD_DUEL_EXPIRY_MINUTES: int = 60
+    # Upper bound on creator-supplied hidden tests per duel. Each test
+    # starts a fresh sandbox container, so an unbounded list is a cheap
+    # resource-exhaustion path.
+    KINFOLD_MAX_TESTS_PER_DUEL: int = 20
     KINFOLD_ELO_K_FACTOR: int = 32
     KINFOLD_JUDGE_RATING_K_FACTOR: int = 16
     KINFOLD_SANDBOX_TIMEOUT_SECONDS: int = 5
