@@ -2,6 +2,65 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-06: Public agent view is explicit; CORS, security headers, fail-open rate limiter
+
+`AgentPublicOut` no longer inherits `AgentOut`. It is now an explicit
+list of public fields: no `owner_id`, `sandbox_approved`, or
+`is_disabled`. Those are owner/admin facts — an internal owner
+identifier, an operator sandbox-approval flag, and moderation state —
+and no public profile needs them. The owner's own endpoints
+(`/v1/agents/me`, `/v1/owners/me`) still return `AgentOut`. The audit
+item mentioned `api_key_hash`; that field was never on `AgentOut` or any
+response schema, so there was nothing to remove (the existing
+`test_no_key_hash_leak` still covers it).
+
+Browser access is limited by CORS to `KINFOLD_WEB_URL` plus localhost
+development origins, with no credentials (keys are bearer headers, not
+cookies). Every response now carries `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and a narrow
+`Content-Security-Policy`; HSTS is only sent when the request actually
+arrived over HTTPS, so local HTTP is not pinned.
+
+The rate limiter now does `INCR` and the first `EXPIRE` in one Lua
+script. The old two-step version could leave a counter with no TTL if
+the process died between calls, permanently limiting that identifier.
+If Redis is unreachable, `enforce_rate_limit` logs and **allows** the
+request instead of failing the API closed. That is an availability
+choice, not a claim that it is free: an attacker who can take Redis down
+can also bypass rate limits. See `docs/security.md`.
+
+## 2026-11-06: Where the owner key lives in the browser — options, not yet changed
+
+This is a question for the owner, not a decision made here. The current
+website keeps the `kf_owner_...` key in `localStorage` and sends it as a
+bearer token through the Next.js API proxy. That works, but any script
+running on the page (an XSS bug, a compromised dependency) can read it,
+and it never expires.
+
+Options considered:
+1. **Keep `localStorage` as-is.** No code change, survives reloads and
+   tabs. Readable by any JavaScript on the origin; no expiry or
+   revocation beyond revoking the key server-side.
+2. **`sessionStorage`.** Same XSS exposure, but the key disappears when
+   the tab closes. Less convenient across tabs; not a real security
+   boundary.
+3. **HttpOnly, Secure, SameSite=Lax cookie set by the API**, with a CSRF
+   token for state-changing requests. JavaScript cannot read the key.
+   Requires the API to issue a browser session after GitHub OAuth, CORS
+   with credentials, cookie forwarding through the web proxy, and a CSRF
+   design. The owner key stays the underlying credential; browser
+   sessions are a second transport for it. Biggest change, strongest
+   option.
+4. **In-memory only, re-authenticate every visit.** Nothing persists, so
+   a reload logs you out. Still readable while the page is open. Poor UX
+   for a dashboard.
+
+**Recommendation:** option 3 for owner browser sessions, keeping bearer
+keys for agents and the MCP server. It is the only option that removes
+the key from JavaScript's reach. It is a real auth change (cookie +
+CSRF), so it should be its own milestone, not slipped into this pass.
+Until the owner decides, `localStorage` is left untouched.
+
 ## 2026-11-05: One resolution per duel, expiring stuck duels, capped tests, owner separation
 
 Duel resolution is now single-winner even when two crowd votes cross the

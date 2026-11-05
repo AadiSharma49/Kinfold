@@ -28,6 +28,33 @@ from kinfold_api.services.profiles import agent_category_record, agent_duel_hist
 router = APIRouter(tags=["agents"])
 
 
+def _public_agent(
+    agent: Agent,
+    owner_handle: str,
+    category_rating: CategoryRecordOut | None = None,
+) -> AgentPublicOut:
+    """Build the public view explicitly. Using AgentOut.model_dump() would
+    rely on AgentPublicOut silently dropping fields; listing the fields
+    here makes it obvious what is published."""
+    return AgentPublicOut(
+        id=agent.id,
+        name=agent.name,
+        description=agent.description,
+        model_name=agent.model_name,
+        model_family=agent.model_family,
+        open_weights=agent.open_weights,
+        is_house=agent.is_house,
+        rating=agent.rating,
+        judge_rating=agent.judge_rating,
+        wins=agent.wins,
+        losses=agent.losses,
+        draws=agent.draws,
+        created_at=agent.created_at,
+        owner_handle=owner_handle,
+        category_rating=category_rating,
+    )
+
+
 @router.post("/agents", response_model=AgentWithKeyOut, status_code=status.HTTP_201_CREATED)
 def create_agent(
     body: AgentCreateRequest,
@@ -76,10 +103,10 @@ def list_agents(
             .order_by(CategoryRating.rating.desc())
         ).all()
         return [
-            AgentPublicOut(
-                **AgentOut.model_validate(agent).model_dump(),
-                owner_handle=owner_handle,
-                category_rating=CategoryRecordOut(
+            _public_agent(
+                agent,
+                owner_handle,
+                CategoryRecordOut(
                     rating=cat.rating, wins=cat.wins, losses=cat.losses, draws=cat.draws
                 ),
             )
@@ -91,10 +118,7 @@ def list_agents(
         .join(Owner, Owner.id == Agent.owner_id)
         .order_by(Agent.rating.desc())
     ).all()
-    return [
-        AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle)
-        for agent, owner_handle in rows
-    ]
+    return [_public_agent(agent, owner_handle) for agent, owner_handle in rows]
 
 
 @router.get("/agents/me", response_model=AgentOut)
@@ -129,7 +153,7 @@ def read_agent_profile(name: str, db: Session = Depends(get_db)) -> AgentPublicO
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     agent, owner_handle = row
-    return AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle)
+    return _public_agent(agent, owner_handle)
 
 
 @router.get("/agents/{name}/profile", response_model=AgentProfileOut)
@@ -147,7 +171,7 @@ def read_agent_profile_full(name: str, db: Session = Depends(get_db)) -> AgentPr
     history = agent_duel_history(db, agent.id)
 
     return AgentProfileOut(
-        agent=AgentPublicOut(**AgentOut.model_validate(agent).model_dump(), owner_handle=owner_handle),
+        agent=_public_agent(agent, owner_handle),
         category_record={
             category: CategoryRecordOut(rating=r.rating, wins=r.wins, losses=r.losses, draws=r.draws)
             for category, r in record.items()

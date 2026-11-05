@@ -57,6 +57,27 @@ def _is_trusted_proxy(ip_str: str, trusted: list) -> bool:
     return any(ip in network for network in trusted)
 
 
+def _apply_security_headers(response: Response, request: Request) -> None:
+    """Baseline headers for an API that returns JSON and never needs to be
+    framed or embedded. Kept conservative so FastAPI's /docs page still
+    works in development: the CSP only pins framing and object/base URLs,
+    it does not block scripts or styles. HSTS is only sent when the
+    request actually arrived over HTTPS (directly or via a trusted
+    proxy's X-Forwarded-Proto) — sending it over plain HTTP would pin
+    localhost to HTTPS during development."""
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault(
+        "Content-Security-Policy", "frame-ancestors 'none'; object-src 'none'; base-uri 'none'"
+    )
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+
+
 def _client_ip(request: Request) -> str:
     """The direct TCP peer is always the source of truth. X-Forwarded-For
     is only believed when that direct peer is itself a configured trusted
@@ -87,17 +108,20 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             try:
                 enforce_rate_limit(get_redis_client(), f"ip:{client_ip}", limit)
             except HTTPException as exc:
-                return JSONResponse(
+                response = JSONResponse(
                     {"detail": exc.detail},
                     status_code=exc.status_code,
                     headers={"X-Request-Id": request_id},
                 )
+                _apply_security_headers(response, request)
+                return response
 
         start = time.perf_counter()
         response = await call_next(request)
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
         response.headers["X-Request-Id"] = request_id
+        _apply_security_headers(response, request)
         logger.info(
             json.dumps(
                 {
