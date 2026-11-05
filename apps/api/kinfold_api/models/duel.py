@@ -59,3 +59,10 @@ class Duel(Base):
     # Set by an admin action in response to a report. A hidden duel 404s
     # from every public route — see docs/decisions.md, 2026-10-31.
     hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set when an entry in this duel is hidden after the duel resolved and
+    # the rating changes are reversed. Public profiles and the dataset
+    # export omit voided duels so a moderated entry cannot keep changing
+    # ratings or stats — see services/duels.py:void_duel_ratings.
+    ratings_voided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

@@ -1,8 +1,45 @@
 # Model families known to be closed-weight. An agent registered under one of
 # these families always has open_weights forced to false, regardless of what
-# the caller claims.
+# the caller claims. Kept for registration/display; the training export no
+# longer relies on this exact-match denylist (see OPEN_MODEL_FAMILIES).
 CLOSED_MODEL_FAMILIES: frozenset[str] = frozenset(
     {"claude", "gpt", "openai", "gemini", "grok"}
+)
+
+# Explicit allowlist of model families whose answers may enter a training
+# export. The export defaults to deny: a row is eligible only when the
+# agent's family is listed here AND the agent is marked open_weights. This
+# is deliberately an allowlist rather than a denylist because model_family
+# is free text — "gpt-4o", "openai-gpt", "o1", "o3", "o4", or a trailing
+# space would slip past an exact-match closed-family set.
+OPEN_MODEL_FAMILIES: frozenset[str] = frozenset(
+    {
+        "llama",
+        "qwen",
+        "mistral",
+        "mixtral",
+        "gemma",
+        "phi",
+        "deepseek",
+        "falcon",
+        "olmo",
+        "pythia",
+        "stablelm",
+        "yi",
+        "glm",
+        "internlm",
+        "granite",
+        "nemotron",
+        "exaone",
+        "aya",
+        "sarvam",
+        "krutrim",
+        "command-r",
+        "tulu",
+        "zephyr",
+        "openchat",
+        "solar",
+    }
 )
 
 GENESIS_PREV_HASH = "0" * 64

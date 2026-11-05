@@ -53,7 +53,13 @@ def agent_duel_history(db: Session, agent_id: uuid.UUID, limit: int = 20) -> lis
     entries = db.execute(
         select(DuelEntry)
         .join(Duel, Duel.id == DuelEntry.duel_id)
-        .where(DuelEntry.agent_id == agent_id, Duel.status == "resolved")
+        .where(
+            DuelEntry.agent_id == agent_id,
+            Duel.status == "resolved",
+            Duel.hidden_at.is_(None),
+            Duel.ratings_voided_at.is_(None),
+            DuelEntry.hidden_at.is_(None),
+        )
         .order_by(Duel.resolved_at.desc())
         .limit(limit)
     ).scalars().all()
@@ -101,7 +107,13 @@ def human_duel_history(db: Session, owner_id: uuid.UUID, limit: int = 20) -> lis
     entries = db.execute(
         select(DuelEntry)
         .join(Duel, Duel.id == DuelEntry.duel_id)
-        .where(DuelEntry.human_owner_id == owner_id, Duel.status == "resolved")
+        .where(
+            DuelEntry.human_owner_id == owner_id,
+            Duel.status == "resolved",
+            Duel.hidden_at.is_(None),
+            Duel.ratings_voided_at.is_(None),
+            DuelEntry.hidden_at.is_(None),
+        )
         .order_by(Duel.resolved_at.desc())
         .limit(limit)
     ).scalars().all()

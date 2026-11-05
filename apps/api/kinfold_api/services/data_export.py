@@ -5,9 +5,16 @@ the single source of truth both the export script and the public /data
 page's live count read from, so the two numbers can never drift apart.
 
 Rules, each with a reason:
-- Closed-weight agent on either side -> whole pair skipped (not just that
-  side) — CLAUDE.md: only open-weight answers go into training sets, and
-  the rejected text would still be training data otherwise.
+- Open-weight default-deny: an agent side is eligible only when its
+  model_family is on the explicit OPEN_MODEL_FAMILIES allowlist AND its
+  open_weights flag is true. An unknown or closed family on either side
+  -> whole pair skipped (not just that side) — CLAUDE.md: only
+  open-weight answers go into training sets, and the rejected text would
+  still be training data otherwise. A denylist is not enough because
+  model_family is free text ("gpt-4o", "openai-gpt", "o1", ...).
+- A hidden duel (admin moderation) -> whole duel skipped. Content the
+  arena has removed must not be republished in a dataset.
+- Either entry hidden -> whole duel skipped, for the same reason.
 - Either entry is_trap -> whole duel skipped — a trap is deliberately bad,
   never meant to teach a model anything, agent or human side.
 - Either human entry is flagged human_suspected_ai -> whole pair skipped.
@@ -33,11 +40,12 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from kinfold_api.constants import OPEN_MODEL_FAMILIES
 from kinfold_api.models import Agent, Duel, DuelEntry
 from kinfold_api.services.duels import winning_entry_id
 from kinfold_api.services.pii_scrub import scrub_pii
 
-DATASET_VERSION = "2"  # bump when the eligibility rules or row shape change
+DATASET_VERSION = "3"  # bump when the eligibility rules or row shape change
 
 
 @dataclass
@@ -98,6 +106,7 @@ class ExportManifest:
     pair_count: int
     duels_considered: int
     duels_skipped_closed_weight: int
+    duels_skipped_hidden: int
     duels_skipped_trap: int
     duels_skipped_duplicate: int
     duels_skipped_suspected_ai: int
@@ -129,17 +138,23 @@ def _entry_eligibility(
     agent = agents_by_id.get(entry.agent_id) if entry.agent_id else None
     if agent is None:
         return False, False, False
-    return agent.open_weights, False, False
+    family = agent.model_family.strip().lower()
+    return (agent.open_weights and family in OPEN_MODEL_FAMILIES), False, False
 
 
 def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportManifest]:
     duels = db.execute(
-        select(Duel).where(Duel.status == "resolved", Duel.is_draw.is_(False))
+        select(Duel).where(
+            Duel.status == "resolved",
+            Duel.is_draw.is_(False),
+            Duel.hidden_at.is_(None),
+        )
     ).scalars().all()
 
     pairs: list[PreferencePair] = []
     seen: set[tuple[str, str, str]] = set()
     skipped_closed = 0
+    skipped_hidden = 0
     skipped_trap = 0
     skipped_dup = 0
     skipped_suspected_ai = 0
@@ -149,6 +164,10 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
             select(DuelEntry).where(DuelEntry.duel_id == duel.id)
         ).scalars().all()
         if len(entries) != 2:
+            continue
+
+        if any(e.hidden_at is not None for e in entries):
+            skipped_hidden += 1
             continue
 
         if any(e.is_trap for e in entries):
@@ -210,6 +229,7 @@ def compute_preference_pairs(db: Session) -> tuple[list[PreferencePair], ExportM
         pair_count=len(pairs),
         duels_considered=len(duels),
         duels_skipped_closed_weight=skipped_closed,
+        duels_skipped_hidden=skipped_hidden,
         duels_skipped_trap=skipped_trap,
         duels_skipped_duplicate=skipped_dup,
         duels_skipped_suspected_ai=skipped_suspected_ai,
@@ -236,8 +256,13 @@ Kinfold itself.
 ## Inclusion rules
 
 - Resolved, non-draw duels only ({duels_considered} duels considered this run).
-- Both sides open-weight-or-human — a closed-weight agent on either side
-  skips the whole pair, not just that side ({duels_skipped_closed_weight} duels skipped for this).
+- Both sides open-weight-or-human — an agent side is eligible only when its
+  model family is on Kinfold's explicit open-family allowlist AND its
+  `open_weights` flag is true. An unknown or closed family on either side
+  skips the whole pair, not just that side ({duels_skipped_closed_weight}
+  duels skipped for this).
+- No hidden duels or hidden entries (admin moderation)
+  ({duels_skipped_hidden} duels skipped for this).
 - No trap entries (silently planted known-bad answers used to test judges)
   on either side ({duels_skipped_trap} duels skipped for this).
 - Exact-duplicate (prompt, chosen, rejected) triples: only the first copy
@@ -286,6 +311,7 @@ def write_export(db: Session, out_path: Path) -> ExportManifest:
                 "pair_count": manifest.pair_count,
                 "duels_considered": manifest.duels_considered,
                 "duels_skipped_closed_weight": manifest.duels_skipped_closed_weight,
+                "duels_skipped_hidden": manifest.duels_skipped_hidden,
                 "duels_skipped_trap": manifest.duels_skipped_trap,
                 "duels_skipped_duplicate": manifest.duels_skipped_duplicate,
                 "duels_skipped_suspected_ai": manifest.duels_skipped_suspected_ai,
@@ -303,6 +329,7 @@ def write_export(db: Session, out_path: Path) -> ExportManifest:
             pair_count=manifest.pair_count,
             duels_considered=manifest.duels_considered,
             duels_skipped_closed_weight=manifest.duels_skipped_closed_weight,
+            duels_skipped_hidden=manifest.duels_skipped_hidden,
             duels_skipped_trap=manifest.duels_skipped_trap,
             duels_skipped_duplicate=manifest.duels_skipped_duplicate,
             duels_skipped_suspected_ai=manifest.duels_skipped_suspected_ai,

@@ -2,6 +2,33 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-05: Stage 1 — data integrity (default-deny export, hidden content)
+
+**Branch:** `stage/data-integrity`.
+
+**Built:** the training export is now default-deny against an explicit
+`OPEN_MODEL_FAMILIES` allowlist (plus `open_weights=True`), closing the
+`gpt-4o` / `openai-gpt` / `o1` / `o3` / `o4` exact-match bypass. Hidden
+duels and hidden entries are excluded from `/v1/data/stats` and the JSONL
+export, with a new `duels_skipped_hidden` manifest count and dataset-card
+line. Hiding an already-resolved entry now reverses both sides' overall
+and per-category Elo and win/loss/draw record exactly, marks the duel
+`ratings_voided_at`, and removes it from public profiles and the export;
+an entry hidden before resolution blocks resolution. Migration `0016` adds
+the bookkeeping columns.
+
+**Tests:** 148 collected (was 134). New `tests/test_data_integrity.py`
+covers eight closed/unknown families, an allowed open family, hidden
+duels, hidden entries, Elo/profile reversal, pre-resolution hiding, and
+the already-working AI-suspected exclusion.
+
+**Not run:** the full DB/Postgres/Redis suite in this environment because
+the Docker daemon was not reachable; `ruff` and test collection pass.
+
+**Risky:** hiding a resolved entry now invalidates that duel's rating
+effect for both sides, not just the hidden side — a deliberate choice so
+no rating keeps depending on removed content.
+
 ## 2026-11-02: Directory/launch listing text — ready to paste, nothing submitted
 
 **Branch:** `feature/directory-listings`. Merged into `main`.
