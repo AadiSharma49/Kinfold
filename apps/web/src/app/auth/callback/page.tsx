@@ -3,28 +3,49 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { setStoredKey, takePostLoginRedirect } from "@/components/connect-key-form";
+import { signInOwner, takePostLoginRedirect } from "@/lib/client-owner";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"working" | "error">("working");
 
-  useEffect(() => {
+  const [login] = useState<{ key: string | null; error: string | null }>(() => {
+    if (typeof window === "undefined") return { key: null, error: null };
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const key = hash.get("key");
-    const error = hash.get("error");
+    return { key: hash.get("key"), error: hash.get("error") };
+  });
 
-    if (key) {
-      setStoredKey(key);
-      router.replace(takePostLoginRedirect());
+  useEffect(() => {
+    if (!login.key) {
+      if (login.error) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setStatus("error");
+      }
       return;
     }
 
-    if (error) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStatus("error");
-    }
-  }, [router]);
+    // Drop the key from the address bar and history before doing anything
+    // else, so it can't leak through a refresh or a copied URL.
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search
+    );
+
+    let cancelled = false;
+    void signInOwner(login.key).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        router.replace(takePostLoginRedirect());
+      } else {
+        setStatus("error");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [login, router]);
 
   return (
     <div className="content-width flex flex-1 items-center justify-center py-24 text-center">

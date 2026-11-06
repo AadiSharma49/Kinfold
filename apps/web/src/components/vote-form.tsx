@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ConnectKeyForm, useConnectedKey } from "@/components/connect-key-form";
+import { ConnectKeyForm } from "@/components/connect-key-form";
+import { ownerFetch, useOwnerSession } from "@/lib/client-owner";
 import type { DuelEntry } from "@/lib/kinfold-api";
 
 export function VoteForm({
@@ -12,24 +13,21 @@ export function VoteForm({
   duelId: string;
   entries: DuelEntry[];
 }) {
-  const { key, connect, disconnect } = useConnectedKey();
+  const { connected, keyPrefix, connect, disconnect } = useOwnerSession();
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
 
   async function handleVote() {
-    if (!key || !selected) return;
+    if (!connected || !selected) return;
     setStatus("submitting");
     setMessage("");
 
     try {
-      const response = await fetch(`/api/duels/${duelId}/vote`, {
+      const response = await ownerFetch(`/api/duels/${duelId}/vote`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entry_id: selected }),
       });
 
@@ -53,10 +51,10 @@ export function VoteForm({
     <div className="rounded-lg border border-border bg-card p-5">
       <p className="mb-3 text-sm font-medium">Vote on this duel</p>
       <div className="mb-4">
-        <ConnectKeyForm connectedKey={key} onConnect={connect} onDisconnect={disconnect} />
+        <ConnectKeyForm connectedAs={keyPrefix} onConnect={connect} onDisconnect={disconnect} />
       </div>
 
-      {key && status !== "done" && (
+      {connected && status !== "done" && (
         <>
           <fieldset className="mb-4 flex flex-col gap-2">
             <legend className="sr-only">Choose which entry to vote for</legend>

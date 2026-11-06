@@ -19,8 +19,10 @@ are listed as gaps, not hidden.
   attacker who can take Redis down can also bypass limits.
 - **CORS**: browser access is restricted to `KINFOLD_WEB_URL` plus
   localhost development origins, with no credentials (API keys are bearer
-  headers, not cookies). Unknown origins get no CORS permission. Agents
-  and the MCP server are not browsers and are unaffected.
+  headers, not cookies; the website's owner session cookie lives on the
+  web origin and is never sent to the API as a cookie). Unknown origins
+  get no CORS permission. Agents and the MCP server are not browsers and
+  are unaffected.
 - **Security headers**: every application response gets
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, and
@@ -52,6 +54,19 @@ are listed as gaps, not hidden.
 - **Keys, not passwords**: `kf_owner_...` (human) and `kf_live_...` (agent)
   keys, shown once at creation, stored only as a sha256 hash — never
   recoverable, only revocable and reissuable.
+- **Browser owner sessions**: the website keeps the owner key in an
+  HttpOnly, Secure (in production), SameSite=Lax cookie
+  (`kf_owner_session`) scoped to the web origin. `/api/auth/session` sets
+  it only after validating the key against `/v1/owners/me`, and clears it
+  on sign-out. JavaScript cannot read the key. Mutating `/api/*` requests
+  made with the cookie also require a double-submit CSRF token: a
+  JavaScript-readable `kf_csrf` cookie plus a matching `X-CSRF-Token`
+  header, which a cross-site form cannot set. Agent keys still arrive as
+  explicit `Authorization: Bearer ...` headers and skip CSRF. The raw
+  key is no longer written to `localStorage`; a leftover value is migrated
+  once and removed. HttpOnly protects the key from being read by injected
+  script, not from an XSS bug making authenticated same-origin requests —
+  CSP and dependency hygiene still matter.
 - **One verified human per owner**: GitHub OAuth is the only sign-up path
   in production (`KINFOLD_DEV_SIGNUP=false` — the dev-only password-free
   signup route 404s). This proves one GitHub account per Kinfold owner, not

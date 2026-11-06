@@ -2,6 +2,40 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-06: Owner browser sessions — HttpOnly cookie + CSRF
+
+**Branch:** `stage/owner-session-cookie`.
+
+**Built:** the owner key moved out of `localStorage` and into an
+HttpOnly, Secure (in production), SameSite=Lax cookie (`kf_owner_session`)
+scoped to the web origin. A new `/api/auth/session` route validates a key
+with `/v1/owners/me` before setting the cookie, reports the connected
+prefix, and clears the cookie on `DELETE`. The proxy now prefers an
+explicit `Authorization` header (agent keys) and otherwise reads the
+cookie; cookie-based POST/PUT/PATCH/DELETE also require a double-submit
+CSRF token (`kf_csrf` cookie + `X-CSRF-Token` header). The auth callback
+still receives the key in the URL fragment, but strips it immediately and
+exchanges it for the cookie. A leftover `localStorage` key is migrated
+once and removed. Dashboard and all owner-key forms now call
+`ownerFetch` with no raw key in client state or props.
+
+**Verified:** `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build`
+pass. A live end-to-end check against the running API and web dev server
+passed: session POST/GET, cookie-authenticated `/api/owners/me`, CSRF
+rejection without the header, agent creation with the header, agent-key
+`Authorization` still working, and logout. API suite unchanged at `165
+passed`, `ruff` clean.
+
+**Not done:** no automated browser test for the cookie flow (the web app
+still has no test runner); covers it with the manual end-to-end run.
+GitHub OAuth itself was not exercised locally (the dev signup route was).
+
+**Risky:** the cookie contains the raw owner key, protected by HttpOnly
+and SameSite, not by encryption. Any XSS can still make authenticated
+same-origin requests even though it cannot read the key. CSRF depends on
+the `kf_csrf` cookie surviving; if cookies are cleared mid-session,
+mutating requests fail with a 403 until reload.
+
 ## 2026-11-06: Stage 3 — public exposure and security headers (localStorage pending)
 
 **Branch:** `stage/security`.

@@ -1,67 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import type { SessionResult } from "@/lib/client-owner";
+import { rememberPostLoginRedirect } from "@/lib/client-owner";
 
-const STORAGE_KEY = "kinfold_owner_key";
-const POST_LOGIN_REDIRECT_KEY = "kinfold_post_login_redirect";
 const API_BASE = process.env.NEXT_PUBLIC_KINFOLD_API_URL ?? "http://localhost:8000";
 
-/** Used by /auth/callback after a GitHub login redirect delivers a key. */
-export function setStoredKey(rawKey: string) {
-  localStorage.setItem(STORAGE_KEY, rawKey);
-}
-
-/** Used by /auth/callback to send the user back where they started
- * signing in — e.g. /dashboard, not always /duels. Defaults to /duels if
- * nothing was recorded (a direct visit to /auth/callback shouldn't happen,
- * but fails safe rather than crashing). */
-export function takePostLoginRedirect(): string {
-  const target = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY) ?? "/duels";
-  sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
-  return target;
-}
-
-export function useConnectedKey() {
-  const [key, setKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Reads from localStorage after mount on purpose: doing this during
-    // render would crash on the server and reading it eagerly would cause
-    // a hydration mismatch, since the server never has a stored key.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setKey(localStorage.getItem(STORAGE_KEY));
-  }, []);
-
-  function connect(rawKey: string) {
-    localStorage.setItem(STORAGE_KEY, rawKey);
-    setKey(rawKey);
-  }
-
-  function disconnect() {
-    localStorage.removeItem(STORAGE_KEY);
-    setKey(null);
-  }
-
-  return { key, connect, disconnect };
-}
-
 export function ConnectKeyForm({
-  connectedKey,
+  connectedAs,
   onConnect,
   onDisconnect,
 }: {
-  connectedKey: string | null;
-  onConnect: (key: string) => void;
-  onDisconnect: () => void;
+  connectedAs: string | null;
+  onConnect: (key: string) => Promise<SessionResult>;
+  onDisconnect: () => void | Promise<void>;
 }) {
   const [input, setInput] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  if (connectedKey) {
+  if (connectedAs) {
     return (
       <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-2">
         <span className="font-mono text-xs text-muted-foreground">
-          Connected as {connectedKey.slice(0, 12)}...
+          Connected as {connectedAs}
         </span>
         <button
           type="button"
@@ -74,6 +37,22 @@ export function ConnectKeyForm({
     );
   }
 
+  async function handleManualSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const value = input.trim();
+    if (!value || submitting) return;
+
+    setSubmitting(true);
+    setError("");
+    const result = await onConnect(value);
+    if (result.ok) {
+      setInput("");
+    } else {
+      setError(result.error);
+    }
+    setSubmitting(false);
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <a
@@ -82,7 +61,7 @@ export function ConnectKeyForm({
           // Remembered here, read back by /auth/callback — otherwise
           // signing in from anywhere but the duels page dumps you back on
           // /duels instead of where you actually started.
-          sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, window.location.pathname);
+          rememberPostLoginRedirect(window.location.pathname);
         }}
         className="rounded-md border border-border px-4 py-2 text-center text-sm font-medium transition-colors hover:bg-muted"
       >
@@ -90,13 +69,7 @@ export function ConnectKeyForm({
       </a>
 
       {showManual ? (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (input.trim()) onConnect(input.trim());
-          }}
-          className="flex flex-col gap-2 sm:flex-row"
-        >
+        <form onSubmit={handleManualSubmit} className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="kinfold-key" className="sr-only">
             Your Kinfold owner key
           </label>
@@ -111,9 +84,10 @@ export function ConnectKeyForm({
           />
           <button
             type="submit"
-            className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            disabled={submitting}
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-60"
           >
-            Connect
+            {submitting ? "Connecting..." : "Connect"}
           </button>
         </form>
       ) : (
@@ -124,6 +98,12 @@ export function ConnectKeyForm({
         >
           Or paste a key manually
         </button>
+      )}
+
+      {error && (
+        <p role="status" aria-live="polite" className="text-xs text-red-600 dark:text-red-400">
+          {error}
+        </p>
       )}
     </div>
   );

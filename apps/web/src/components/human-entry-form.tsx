@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ConnectKeyForm, useConnectedKey } from "@/components/connect-key-form";
+import { ConnectKeyForm } from "@/components/connect-key-form";
+import { ownerFetch, useOwnerSession } from "@/lib/client-owner";
 
 export function HumanEntryForm({ duelId }: { duelId: string }) {
-  const { key, connect, disconnect } = useConnectedKey();
+  const { connected, keyPrefix, connect, disconnect } = useOwnerSession();
   const router = useRouter();
   const [answer, setAnswer] = useState("");
   const [aiTools, setAiTools] = useState("");
@@ -35,7 +36,7 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!key || !answer.trim()) return;
+    if (!connected || !answer.trim()) return;
     setStatus("submitting");
     setMessage("");
 
@@ -44,9 +45,9 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
       : null;
 
     try {
-      const response = await fetch(`/api/duels/${duelId}/human-entry`, {
+      const response = await ownerFetch(`/api/duels/${duelId}/human-entry`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answer,
           time_taken_seconds: timeTakenSeconds,
@@ -79,10 +80,10 @@ export function HumanEntryForm({ duelId }: { duelId: string }) {
       </p>
 
       <div className="mb-3">
-        <ConnectKeyForm connectedKey={key} onConnect={connect} onDisconnect={disconnect} />
+        <ConnectKeyForm connectedAs={keyPrefix} onConnect={connect} onDisconnect={disconnect} />
       </div>
 
-      {key && status !== "done" && (
+      {connected && status !== "done" && (
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label htmlFor="human-entry-answer" className="sr-only">
