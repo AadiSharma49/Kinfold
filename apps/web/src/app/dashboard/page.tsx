@@ -2,25 +2,26 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Section, SectionHeading } from "@/components/section";
-import { ConnectKeyForm, useConnectedKey } from "@/components/connect-key-form";
+import { ConnectKeyForm } from "@/components/connect-key-form";
 import { CreateAgentForm } from "@/components/dashboard/create-agent-form";
 import { AgentList } from "@/components/dashboard/agent-list";
 import { KeyReveal } from "@/components/dashboard/key-reveal";
 import { ConnectConfig } from "@/components/dashboard/connect-config";
 import { DeleteAccountSection } from "@/components/dashboard/delete-account-section";
+import { ownerFetch, useOwnerSession } from "@/lib/client-owner";
 import type { Agent, ApiKey, ApiKeyCreated } from "@/lib/kinfold-api";
 
 export default function DashboardPage() {
-  const { key: ownerKey, connect, disconnect } = useConnectedKey();
+  const { connected, keyPrefix, connect, disconnect } = useOwnerSession();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [justCreated, setJustCreated] = useState<ApiKeyCreated | null>(null);
 
-  const refresh = useCallback(async (key: string) => {
+  const refresh = useCallback(async () => {
     const [agentsResponse, keysResponse] = await Promise.all([
-      fetch("/api/owners/me/agents", { headers: { Authorization: `Bearer ${key}` } }),
-      fetch("/api/keys", { headers: { Authorization: `Bearer ${key}` } }),
+      ownerFetch("/api/owners/me/agents"),
+      ownerFetch("/api/keys"),
     ]);
     if (agentsResponse.ok) setAgents(await agentsResponse.json());
     if (keysResponse.ok) setKeys(await keysResponse.json());
@@ -28,9 +29,18 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!connected) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (ownerKey) refresh(ownerKey);
-  }, [ownerKey, refresh]);
+    void refresh();
+  }, [connected, refresh]);
+
+  async function handleDisconnect() {
+    await disconnect();
+    setAgents([]);
+    setKeys([]);
+    setJustCreated(null);
+    setLoaded(false);
+  }
 
   const keysByAgent = keys.reduce<Record<string, ApiKey[]>>((acc, k) => {
     if (!k.agent_id) return acc;
@@ -50,16 +60,20 @@ export default function DashboardPage() {
 
       <Section className="border-t border-border">
         <div className="max-w-sm">
-          <ConnectKeyForm connectedKey={ownerKey} onConnect={connect} onDisconnect={disconnect} />
+          <ConnectKeyForm
+            connectedAs={keyPrefix}
+            onConnect={connect}
+            onDisconnect={handleDisconnect}
+          />
         </div>
 
-        {!ownerKey && (
+        {!connected && (
           <p className="mt-4 text-sm text-muted-foreground">
             Sign in with GitHub above to manage your agents.
           </p>
         )}
 
-        {ownerKey && (
+        {connected && (
           <div className="mt-8 space-y-8">
             {justCreated && (
               <div className="space-y-4 rounded-lg border border-border bg-card p-5">
@@ -81,10 +95,9 @@ export default function DashboardPage() {
             )}
 
             <CreateAgentForm
-              ownerKey={ownerKey}
               onCreated={(key) => {
                 setJustCreated(key);
-                refresh(ownerKey);
+                void refresh();
               }}
             />
 
@@ -92,14 +105,13 @@ export default function DashboardPage() {
               <p className="mb-3 text-sm font-medium">Your agents</p>
               {loaded ? (
                 <AgentList
-                  ownerKey={ownerKey}
                   agents={agents}
                   keysByAgent={keysByAgent}
                   onKeyMinted={(_agentId, key) => {
                     setJustCreated(key);
-                    refresh(ownerKey);
+                    void refresh();
                   }}
-                  onKeyRevoked={() => refresh(ownerKey)}
+                  onKeyRevoked={() => void refresh()}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">Loading...</p>
@@ -107,11 +119,8 @@ export default function DashboardPage() {
             </div>
 
             <DeleteAccountSection
-              ownerKey={ownerKey}
               onDeleted={() => {
-                disconnect();
-                setAgents([]);
-                setKeys([]);
+                void handleDisconnect();
               }}
             />
           </div>

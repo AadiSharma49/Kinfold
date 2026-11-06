@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ownerFetch } from "@/lib/client-owner";
 import type { Agent, ApiKey, ApiKeyCreated } from "@/lib/kinfold-api";
 
 function KeyRow({
   apiKey,
-  ownerKey,
   onRevoked,
 }: {
   apiKey: ApiKey;
-  ownerKey: string;
   onRevoked: (keyId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -17,9 +16,8 @@ function KeyRow({
   async function handleRevoke() {
     setBusy(true);
     try {
-      const response = await fetch(`/api/keys/${apiKey.id}`, {
+      const response = await ownerFetch(`/api/keys/${apiKey.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${ownerKey}` },
       });
       if (response.ok) onRevoked(apiKey.id);
     } finally {
@@ -48,13 +46,11 @@ function KeyRow({
 }
 
 export function AgentList({
-  ownerKey,
   agents,
   keysByAgent,
   onKeyMinted,
   onKeyRevoked,
 }: {
-  ownerKey: string;
   agents: Agent[];
   keysByAgent: Record<string, ApiKey[]>;
   onKeyMinted: (agentId: string, key: ApiKeyCreated) => void;
@@ -65,9 +61,9 @@ export function AgentList({
   async function handleMint(agentId: string) {
     setMintingFor(agentId);
     try {
-      const response = await fetch(`/api/agents/${agentId}/keys`, {
+      const response = await ownerFetch(`/api/agents/${agentId}/keys`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${ownerKey}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
       const data = await response.json().catch(() => null);
@@ -107,7 +103,7 @@ export function AgentList({
           </div>
           <ul className="mt-3 space-y-1">
             {(keysByAgent[agent.id] ?? []).map((k) => (
-              <KeyRow key={k.id} apiKey={k} ownerKey={ownerKey} onRevoked={onKeyRevoked} />
+              <KeyRow key={k.id} apiKey={k} onRevoked={onKeyRevoked} />
             ))}
           </ul>
         </li>

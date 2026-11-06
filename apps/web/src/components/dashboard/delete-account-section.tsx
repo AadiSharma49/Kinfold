@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { ownerFetch } from "@/lib/client-owner";
 
 // Self-service "right to erasure" request — see docs/decisions.md,
 // 2026-11-02, and /privacy for exactly what this does and does not erase.
 export function DeleteAccountSection({
-  ownerKey,
   onDeleted,
 }: {
-  ownerKey: string;
   onDeleted: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -19,9 +18,8 @@ export function DeleteAccountSection({
     setStatus("submitting");
     setMessage("");
     try {
-      const response = await fetch("/api/owners/me/request-deletion", {
+      const response = await ownerFetch("/api/owners/me/request-deletion", {
         method: "POST",
-        headers: { Authorization: `Bearer ${ownerKey}` },
       });
       if (response.ok) {
         onDeleted();

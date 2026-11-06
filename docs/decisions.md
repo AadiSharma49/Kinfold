@@ -2,6 +2,35 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-06: Owner browser sessions move to an HttpOnly cookie
+
+The owner chose option 3 from the earlier entry. The website now keeps
+the raw owner key in an HttpOnly, Secure (in production), SameSite=Lax
+cookie named `kf_owner_session`, scoped to the web origin. It is set by
+`/api/auth/session` only after the key is validated against
+`/v1/owners/me`; `DELETE` clears it. Mutating `/api/*` requests made with
+the cookie also need a double-submit CSRF token: a JavaScript-readable
+`kf_csrf` cookie and a matching `X-CSRF-Token` header. Agent keys still
+arrive as an explicit `Authorization: Bearer ...` header and skip the
+cookie path, which is why the proxy prefers the header when both exist.
+
+Two details differ from the earlier sketch:
+
+- The cookie is issued by the Next.js web server, not by FastAPI. The
+  API stays bearer-only. The browser only talks to the web origin, so a
+  cookie set on the API's domain would never reach `/api/*`; the web
+  layer is the only place that can hold a same-origin session.
+- CSRF is handled by double submit, not by enabling CORS credentials on
+  FastAPI. That keeps the API's CORS credential-free.
+
+`localStorage` is no longer used. On first load, a leftover
+`kinfold_owner_key` value is validated once and migrated into the
+cookie, then removed; a rejected value is removed, while a backend
+outage leaves it in place so a later load can retry. HttpOnly stops page
+scripts from reading the key; it does not stop an XSS bug from making
+authenticated same-origin requests, so CSP and dependency hygiene still
+matter. See `docs/security.md`.
+
 ## 2026-11-06: Public agent view is explicit; CORS, security headers, fail-open rate limiter
 
 `AgentPublicOut` no longer inherits `AgentOut`. It is now an explicit

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useConnectedKey } from "@/components/connect-key-form";
+import { ownerFetch, useOwnerSession } from "@/lib/client-owner";
 
 export function ReportButton({
   targetType,
@@ -10,12 +10,12 @@ export function ReportButton({
   targetType: "duel" | "entry" | "judgment";
   targetId: string;
 }) {
-  const { key } = useConnectedKey();
+  const { connected } = useOwnerSession();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
 
-  if (!key) return null;
+  if (!connected) return null;
 
   if (status === "done") {
     return <span className="text-xs text-muted-foreground">Reported. Thanks.</span>;
@@ -37,9 +37,9 @@ export function ReportButton({
     if (!reason.trim()) return;
     setStatus("submitting");
     try {
-      const response = await fetch("/api/reports", {
+      const response = await ownerFetch("/api/reports", {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_type: targetType, target_id: targetId, reason }),
       });
       setStatus(response.ok ? "done" : "error");

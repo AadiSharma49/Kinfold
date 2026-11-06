@@ -1,33 +1,43 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { apiBaseUrl } from "@/lib/kinfold-api";
+import { CSRF_COOKIE, CSRF_HEADER, OWNER_COOKIE } from "@/lib/session-cookies";
 
-// Shared by every same-origin route under src/app/api/** that forwards a
-// browser-held Kinfold key to the real backend. Browser JS never talks to
-// apps/api directly — only this server-side proxy does — which sidesteps
-// CORS and keeps the real API URL out of client bundles except where it's
-// deliberately public (the GitHub sign-in link).
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Browser JS never talks to apps/api directly — only this server-side
+// proxy does — which sidesteps CORS and keeps the real API URL out of
+// client bundles except where it's deliberately public (the GitHub
+// sign-in link). Owner keys live in an HttpOnly cookie; agent keys are
+// still passed through explicitly with an Authorization header.
 export async function proxyToApi(
   request: Request,
   path: string,
   init: { method: string; body?: unknown } = { method: "GET" }
 ): Promise<NextResponse> {
-  const authorization = request.headers.get("authorization");
-  if (!authorization) {
-    return NextResponse.json(
-      { status: "error", message: "Connect your Kinfold key first." },
-      { status: 401 }
-    );
+  const auth = await resolveAuthorization(request, init.method);
+  if (auth instanceof NextResponse) {
+    return auth;
   }
 
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, {
       method: init.method,
       headers: {
-        Authorization: authorization,
+        Authorization: auth.authorization,
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      cache: "no-store",
     });
+
+    if (response.status === 401 && auth.fromCookie) {
+      // The owner key was revoked or the owner was deleted. Drop the
+      // now-useless cookie so the UI can fall back to signed-out.
+      const store = await cookies();
+      store.delete(OWNER_COOKIE);
+      store.delete(CSRF_COOKIE);
+    }
 
     if (response.status === 204) {
       return new NextResponse(null, { status: 204 });
@@ -44,4 +54,43 @@ export async function proxyToApi(
       { status: 503 }
     );
   }
+}
+
+type ResolvedAuth = { authorization: string; fromCookie: boolean };
+
+async function resolveAuthorization(
+  request: Request,
+  method: string
+): Promise<ResolvedAuth | NextResponse> {
+  const header = request.headers.get("authorization");
+  if (header) {
+    // Agent keys arrive this way and are never stored in a cookie, so a
+    // cross-site request can't forge them — no CSRF check needed.
+    return { authorization: header, fromCookie: false };
+  }
+
+  const store = await cookies();
+  const ownerKey = store.get(OWNER_COOKIE)?.value;
+  if (!ownerKey) {
+    return NextResponse.json(
+      { status: "error", message: "Connect your Kinfold key first." },
+      { status: 401 }
+    );
+  }
+
+  if (MUTATING_METHODS.has(method.toUpperCase())) {
+    const cookieToken = store.get(CSRF_COOKIE)?.value;
+    const headerToken = request.headers.get(CSRF_HEADER);
+    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Security check failed. Reload the page and try again.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  return { authorization: `Bearer ${ownerKey}`, fromCookie: true };
 }

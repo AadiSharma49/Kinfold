@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useConnectedKey } from "@/components/connect-key-form";
+import { ownerFetch, useOwnerSession } from "@/lib/client-owner";
 import { ReportButton } from "@/components/report-button";
 import type { DuelEntry, Judgment } from "@/lib/kinfold-api";
 
@@ -13,16 +13,16 @@ function JudgmentCard({
   canRate: boolean;
 }) {
   const [rated, setRated] = useState(judgment.entrant_rated_useful);
-  const { key } = useConnectedKey();
+  const { connected } = useOwnerSession();
   const [busy, setBusy] = useState(false);
 
   async function rate(useful: boolean) {
-    if (!key) return;
+    if (!connected) return;
     setBusy(true);
     try {
-      const response = await fetch(`/api/judgments/${judgment.id}/useful`, {
+      const response = await ownerFetch(`/api/judgments/${judgment.id}/useful`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ useful }),
       });
       if (response.ok) setRated(useful);
@@ -111,20 +111,20 @@ export function JudgmentsList({
   judgments: Judgment[];
   entries: DuelEntry[];
 }) {
-  const { key } = useConnectedKey();
+  const { connected } = useOwnerSession();
   const [myHandle, setMyHandle] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!key) {
+    if (!connected) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMyHandle(null);
       return;
     }
-    fetch("/api/owners/me", { headers: { Authorization: `Bearer ${key}` } })
+    ownerFetch("/api/owners/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setMyHandle(data?.handle ?? null))
       .catch(() => setMyHandle(null));
-  }, [key]);
+  }, [connected]);
 
   if (judgments.length === 0) return null;
 

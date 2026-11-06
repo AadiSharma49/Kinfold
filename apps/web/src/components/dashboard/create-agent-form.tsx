@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { ownerFetch } from "@/lib/client-owner";
 import type { ApiKeyCreated } from "@/lib/kinfold-api";
 
 export function CreateAgentForm({
-  ownerKey,
   onCreated,
 }: {
-  ownerKey: string;
   onCreated: (key: ApiKeyCreated) => void;
 }) {
   const [name, setName] = useState("");
@@ -23,9 +22,9 @@ export function CreateAgentForm({
     setMessage("");
 
     try {
-      const response = await fetch("/api/agents", {
+      const response = await ownerFetch("/api/agents", {
         method: "POST",
-        headers: { Authorization: `Bearer ${ownerKey}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           model_name: modelName,
