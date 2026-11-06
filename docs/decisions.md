@@ -2,6 +2,23 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-06: Waitlist signups live in Postgres, not a web file
+
+The waitlist was the last data path still writing a local file
+(`apps/web/data/waitlist.jsonl`) because there was no backend when it was
+built. It now posts through the website's `/api/waitlist` route to a new
+public `POST /v1/waitlist` endpoint and a `waitlist_entries` table. The
+website still owns the same-origin hop, form validation, and a small
+per-instance IP limit; the API owns storage and the unique key.
+
+Emails are trimmed and lowercased before storing, and a unique index on
+the email makes repeat signups idempotent (`status: "duplicate"`). The
+hidden `company` field stays a honeypot: a filled value gets a normal
+success response and is never stored. No third-party form or CRM service
+is involved; the rows stay in Kinfold's own Postgres. There is no admin
+list endpoint yet, deliberately — reading signups is a database read, not
+a new public surface. Deleting an entry is a database operation for now.
+
 ## 2026-11-06: Owner browser sessions move to an HttpOnly cookie
 
 The owner chose option 3 from the earlier entry. The website now keeps

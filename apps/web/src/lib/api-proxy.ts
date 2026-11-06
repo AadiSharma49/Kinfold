@@ -20,18 +20,39 @@ export async function proxyToApi(
     return auth;
   }
 
+  return forwardToApi(path, init, {
+    authorization: auth.authorization,
+    clearOn401: auth.fromCookie,
+  });
+}
+
+// Public backend calls (for example the waitlist signup) need no key.
+// The browser still goes through this server so the API URL stays out of
+// client code and CORS stays off.
+export async function proxyPublicToApi(
+  path: string,
+  init: { method: string; body?: unknown } = { method: "GET" }
+): Promise<NextResponse> {
+  return forwardToApi(path, init, {});
+}
+
+async function forwardToApi(
+  path: string,
+  init: { method: string; body?: unknown },
+  options: { authorization?: string; clearOn401?: boolean }
+): Promise<NextResponse> {
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, {
       method: init.method,
       headers: {
-        Authorization: auth.authorization,
+        ...(options.authorization ? { Authorization: options.authorization } : {}),
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       cache: "no-store",
     });
 
-    if (response.status === 401 && auth.fromCookie) {
+    if (response.status === 401 && options.clearOn401) {
       // The owner key was revoked or the owner was deleted. Drop the
       // now-useless cookie so the UI can fall back to signed-out.
       const store = await cookies();

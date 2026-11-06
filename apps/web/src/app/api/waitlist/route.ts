@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { mkdir, readFile, appendFile } from "node:fs/promises";
-import path from "node:path";
+import { proxyPublicToApi } from "@/lib/api-proxy";
 import { isRateLimited, waitlistSchema } from "@/lib/waitlist";
 
-// Temporary storage until the FastAPI backend exists: one JSON line per signup.
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "waitlist.jsonl");
-
+// Signups live in the FastAPI Postgres database. This route keeps the
+// browser on the web origin, validates the shape, and applies a small
+// per-instance rate limit before forwarding.
 export async function POST(request: Request) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -37,55 +35,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, role, bring, company } = parsed.data;
-
   // Honeypot: real users never fill this hidden field.
-  if (company) {
+  if (parsed.data.company) {
     return NextResponse.json({ status: "ok" });
   }
 
-  try {
-    await mkdir(DATA_DIR, { recursive: true });
-
-    let existing = "";
-    try {
-      existing = await readFile(DATA_FILE, "utf8");
-    } catch {
-      existing = "";
-    }
-
-    const alreadyExists = existing
-      .split("\n")
-      .filter(Boolean)
-      .some((line) => {
-        try {
-          return JSON.parse(line).email === email;
-        } catch {
-          return false;
-        }
-      });
-
-    if (alreadyExists) {
-      return NextResponse.json(
-        { status: "duplicate", message: "You're already on the list." },
-        { status: 200 }
-      );
-    }
-
-    const entry = {
-      email,
-      role,
-      bring: bring || undefined,
-      createdAt: new Date().toISOString(),
-    };
-
-    await appendFile(DATA_FILE, JSON.stringify(entry) + "\n", "utf8");
-
-    return NextResponse.json({ status: "ok" });
-  } catch {
-    return NextResponse.json(
-      { status: "error", message: "Something went wrong. Try again." },
-      { status: 500 }
-    );
-  }
+  return proxyPublicToApi("/v1/waitlist", {
+    method: "POST",
+    body: parsed.data,
+  });
 }

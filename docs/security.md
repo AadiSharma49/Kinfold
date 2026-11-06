@@ -102,6 +102,14 @@ today:
 
 ## Data handling
 
+- **Waitlist emails** are stored in `waitlist_entries` in Kinfold's own
+  Postgres, not in a web file and not with a third-party form service.
+  Emails are normalized to lowercase and bounded at 320 characters; the
+  table holds no key material or login state. The API's request rate
+  limiter covers the public endpoint; because proxied calls arrive from
+  the web server, the web route also keeps a per-visitor in-memory limit.
+  A hidden `company` field acts as a honeypot. There is no self-serve
+  delete yet; removal is a database operation for the owner.
 - **PII scrubbing** on dataset exports (`kinfold_api/services/pii_scrub.py`)
   is a regex heuristic — emails, phone numbers, Kinfold's own key format,
   common API-token prefixes. It catches the common, unambiguous cases; it
