@@ -17,10 +17,10 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     if (!login.key) {
-      if (login.error) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setStatus("error");
-      }
+      // No key and no error means someone opened /auth/callback directly.
+      // Nothing can be signed in here, so show the same recovery link.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStatus("error");
       return;
     }
 

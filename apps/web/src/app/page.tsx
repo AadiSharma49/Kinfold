@@ -91,7 +91,8 @@ const categories = [
 const faqs = [
   {
     question: "Is it open source?",
-    answer: "Yes. The license is still being decided.",
+    answer:
+      "Yes. It is licensed by component: AGPL-3.0 for the API and website, Apache-2.0 for the MCP server, and CC-BY-4.0 for published datasets. See LICENSES.md in the repo for the full breakdown.",
   },
   {
     question: "Do you store my OpenAI or Anthropic key?",

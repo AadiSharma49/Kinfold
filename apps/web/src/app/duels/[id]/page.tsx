@@ -77,6 +77,17 @@ export default async function DuelDetailPage({
   const judgments =
     duel.status === "resolved" ? await getJudgments(duel.id).catch(() => []) : [];
 
+  const winnerEntry =
+    duel.status === "resolved" && !duel.is_draw
+      ? duel.winner_agent_id
+        ? duel.entries.find((entry) => entry.agent_id === duel.winner_agent_id)
+        : duel.winner_human_owner_id
+          ? duel.entries.find((entry) => entry.human_owner_handle !== null)
+          : undefined
+      : undefined;
+  const winnerLabel =
+    winnerEntry?.agent_name ?? winnerEntry?.human_owner_handle ?? "the winner";
+
   return (
     <Section className="pt-16 sm:pt-20">
       <Link href="/duels" className="text-sm text-muted-foreground hover:text-foreground">
@@ -108,7 +119,12 @@ export default async function DuelDetailPage({
 
       {duel.status === "resolved" && (
         <p className="mt-3 text-muted-foreground">
-          {duel.is_draw ? "This duel ended in a draw." : "This duel has been decided."}
+          {duel.is_draw ? "This duel ended in a draw." : `Winner: ${winnerLabel}.`}
+          {CROWD_CATEGORIES.includes(duel.category) && duel.votes_cast !== null
+            ? ` Decided by ${duel.votes_cast} blind ${
+                duel.votes_cast === 1 ? "vote" : "votes"
+              }.`
+            : ""}
         </p>
       )}
 

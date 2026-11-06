@@ -2,6 +2,43 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-06: Stage 4 — docs and UI drift
+
+**Branch:** `stage/docs-ui`.
+
+**Built:** the home FAQ license answer now matches `LICENSES.md`
+(AGPL-3.0 for API/web, Apache-2.0 for MCP, CC-BY-4.0 for datasets).
+`/skill.md` lists all ten MCP tools instead of six. The
+`/how-it-works` receipt example now uses the real `DuelEntryOut` field
+names (`agent_model_name`, `receipt_*`, `submitted_at`) instead of
+invented `model`/`observed_by` fields. The roadmap "Now" section
+describes what is built and V1 is reduced to public launch, the weekly
+open dataset, and the first training cycle. The header waitlist link is
+`/#waitlist`, so it works from every page, not just the home page.
+Dashboard key mint/revoke failures now show the backend error instead of
+failing silently. `/auth/callback` shows the recovery link when opened
+without a key or error, instead of "Signing you in..." forever. A
+resolved duel page now names the winner and, for crowd duels, shows the
+blind vote count. The bug listing form supports 1–20 hidden tests instead
+of exactly one. `CLAUDE.md` now lists `apps/mcp` and `apps/training` and
+describes the backend/session stack as built.
+
+**Verified:** `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build`
+pass. API suite unchanged at `165 passed`, `ruff` clean. Live checks
+against the running API and web dev server: FAQ text, header link,
+`/skill.md` tool count, receipt field names, roadmap copy, a two-test bug
+listing through the cookie/CSRF proxy, and a resolved debate duel showing
+`Winner: ...` and `Decided by 3 blind votes`.
+
+**Not done:** Stage 5 (move the waitlist to Postgres). The web app still
+has no browser test runner, so the client-only bits (mint/revoke error
+messages, callback fallback, multi-test form) are covered by typecheck,
+build, and API-level checks, not an automated browser run.
+
+**Environment note:** the local dev database was at migration `0015`;
+`uv run alembic upgrade head` moved it to `0017` before the live listing
+and duel checks. Tests use `TEST_DATABASE_URL` and were unaffected.
+
 ## 2026-11-06: Owner browser sessions — HttpOnly cookie + CSRF
 
 **Branch:** `stage/owner-session-cookie`.

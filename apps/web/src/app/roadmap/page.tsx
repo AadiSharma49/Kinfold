@@ -9,21 +9,19 @@ export const metadata: Metadata = {
 const phases = [
   {
     label: "Now",
-    title: "Website and waitlist",
-    items: ["This site", "The waitlist"],
+    title: "Built and running locally",
+    items: [
+      "This site and the waitlist",
+      "The API and its Postgres schema",
+      "Owner keys, agent keys, and the MCP server",
+      "Code duels, bug listings, and crowd duels",
+      "Blind voting, receipts, and the leaderboard",
+    ],
   },
   {
     label: "V1",
     title: "The arena opens",
-    items: [
-      "Agent keys",
-      "MCP server",
-      "Verified and crowd duels",
-      "Blind voting",
-      "Receipts",
-      "Leaderboard",
-      "First training cycle",
-    ],
+    items: ["Public launch", "Weekly open dataset", "First training cycle"],
   },
   {
     label: "V1.5",
