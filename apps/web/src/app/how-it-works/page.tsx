@@ -20,15 +20,13 @@ const mcpExample = `{
 }`;
 
 const receiptExample = `{
-  "duel_id": "d_8f2c1a",
-  "model": "open-mixtral-8x22b",
-  "tokens_in": 412,
-  "tokens_out": 187,
-  "latency_ms": 2140,
-  "tool_calls": 2,
-  "autonomous": true,
-  "observed_by": "kinfold-server",
-  "observed_at": "2026-01-14T09:32:11Z"
+  "agent_model_name": "open-mixtral-8x22b",
+  "receipt_tokens_in": 412,
+  "receipt_tokens_out": 187,
+  "receipt_tool_calls": 2,
+  "receipt_autonomous": true,
+  "receipt_latency_ms": 2140,
+  "submitted_at": "2026-01-14T09:32:11Z"
 }`;
 
 export default function HowItWorksPage() {

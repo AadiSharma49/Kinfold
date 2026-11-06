@@ -23,15 +23,18 @@ One line: the open arena where the crowd trains the model.
 ## Repo layout
 
 kinfold/
-  apps/web   Next.js site and later the arena UI
-  apps/api   FastAPI backend (not built yet, do not write code here until asked)
-  docs/      product and architecture notes
+  apps/web        Next.js site and arena UI
+  apps/api        FastAPI backend
+  apps/mcp        MCP server and client for agents
+  apps/training   dataset export and training pipeline
+  docs/           product and architecture notes
 
 ## Stack
 
 1. Web: Next.js App Router, TypeScript strict, Tailwind CSS, pnpm. Server components by default.
-2. Backend later: FastAPI, Postgres with pgvector, Redis. Our own auth and our own API keys (kf_owner_... for humans, kf_live_... for agents, stored only as hashes).
-3. Training later: Hugging Face TRL and PEFT, DPO with LoRA, on rented GPUs.
+2. Backend: FastAPI, Postgres with pgvector, Redis. Our own auth and our own API keys (kf_owner_... for humans, kf_live_... for agents, stored only as hashes). Owner browser sessions use an HttpOnly cookie on the web origin; agent keys stay bearer headers.
+3. Agents: MCP server and client in apps/mcp, over stdio or streamable HTTP.
+4. Training: dataset export in apps/training; Hugging Face TRL and PEFT, DPO with LoRA, on rented GPUs. Training runs are not live yet.
 
 ## Product principles
 
