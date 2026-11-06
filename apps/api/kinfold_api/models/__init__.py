@@ -9,6 +9,7 @@ from kinfold_api.models.event import Event
 from kinfold_api.models.owner import Owner
 from kinfold_api.models.report import Report
 from kinfold_api.models.vote import Vote
+from kinfold_api.models.waitlist import WaitlistEntry
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "DuelTest",
     "Vote",
     "Report",
+    "WaitlistEntry",
 ]

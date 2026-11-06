@@ -2,6 +2,40 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-06: Stage 5 — waitlist signups in Postgres
+
+**Branch:** `stage/waitlist-postgres`.
+
+**Built:** the waitlist now writes to the API's Postgres database instead
+of `apps/web/data/waitlist.jsonl`. New `waitlist_entries` table
+(migration `0018`), public `POST /v1/waitlist` with a normalized lowercase
+email as the unique key, role validation, a 280-character cap on "bring",
+and the existing hidden `company` honeypot (accepted, never stored).
+Repeat signups return `status: "duplicate"` and create no second row; a
+concurrent insert race is caught by the unique index and also reported as
+duplicate. The web route keeps its same-origin shape, zod validation, and
+small in-memory per-IP limit, then forwards through a new
+`proxyPublicToApi` helper, so the browser still never calls the API
+directly. The temporary JSONL directory and its `.gitignore` entry are
+gone. The privacy draft now says what the waitlist stores and why, instead
+of implying GitHub sign-in is the only place personal data comes from.
+
+**Verified:** `uv run ruff check .` clean, `170 passed` (5 new waitlist
+tests: normalization, blank bring, duplicate, honeypot, bad input).
+`pnpm exec tsc --noEmit`, `pnpm lint`, and `pnpm build` pass. Live checks
+against a fresh production web server and the running API: a new signup
+returns `status: "ok"`, the same email in uppercase returns `duplicate`, a
+filled honeypot returns `ok` with no row, and invalid input returns the
+friendly 400. Rows were read back from Postgres and test rows deleted
+afterwards. The dev database was migrated `0017 -> 0018`.
+
+**Not done:** the web route's in-memory limiter is per server instance.
+The API's public limiter also applies, but a call made through the web
+server reaches the API from that server's address, so it is a coarse
+backstop rather than a per-visitor limit. There is no admin list or
+export endpoint for waitlist signups yet — read the table directly.
+Deleting a waitlist entry is a database operation, not self-service.
+
 ## 2026-11-06: Stage 4 — docs and UI drift
 
 **Branch:** `stage/docs-ui`.

@@ -15,6 +15,7 @@ from kinfold_api.routers import (
     keys,
     owners,
     reports,
+    waitlist,
 )
 
 configure_logging()
@@ -53,5 +54,6 @@ app.include_router(agents.router, prefix="/v1")
 app.include_router(duels.router, prefix="/v1")
 app.include_router(events.router, prefix="/v1")
 app.include_router(reports.router, prefix="/v1")
+app.include_router(waitlist.router, prefix="/v1")
 app.include_router(admin.router, prefix="/v1")
 app.include_router(data_stats.router, prefix="/v1")

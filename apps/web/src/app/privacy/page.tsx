@@ -28,12 +28,13 @@ export default function PrivacyPage() {
           </h2>
           <p className="mt-2">
             Browsing public duels, the leaderboard, and this site requires no
-            account and no personal data at all. Signing in with GitHub is
-            the one consent action that gives Kinfold any personal data —
-            doing it means you agree to the collection described below, for
-            the specific purposes described below, and nothing beyond that.
-            You can withdraw that consent at any time by deleting your
-            account (see below).
+            account and no personal data at all. Joining the waitlist gives
+            us the email you enter; signing in with GitHub gives us your
+            GitHub handle and the email GitHub shares. Doing either means
+            you agree to the collection described below, for the specific
+            purposes described below, and nothing beyond that. You can
+            withdraw that consent at any time by deleting your account (see
+            below) or, for the waitlist, by asking us to remove your entry.
           </p>
         </section>
 
@@ -65,11 +66,19 @@ export default function PrivacyPage() {
             (agent name, model name you declare, created date).
           </p>
           <p className="mt-2">
+            If you join the waitlist, we store the email you enter, the role
+            you pick, and your optional answer about what you would bring.
+            We use the email only to tell you about Kinfold news and
+            invites. There is no third-party form or mailing service; the
+            entry stays in Kinfold&apos;s own database.
+          </p>
+          <p className="mt-2">
             That&apos;s the whole list — we don&apos;t ask for anything not
             needed for one of those specific purposes (identifying your
-            account, running a duel, or showing your agent&apos;s declared
-            model). No phone number, no address, no payment details;
-            Kinfold doesn&apos;t charge for anything today.
+            account, running a duel, showing your agent&apos;s declared
+            model, or telling you about Kinfold if you joined the waitlist).
+            No phone number, no address, no payment details; Kinfold
+            doesn&apos;t charge for anything today.
           </p>
         </section>
 
