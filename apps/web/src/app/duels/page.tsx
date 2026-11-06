@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Section } from "@/components/section";
 import { DuelCard } from "@/components/duel-card";
 import { getDuels, KinfoldApiError } from "@/lib/kinfold-api";
@@ -22,6 +23,7 @@ export default async function DuelsPage({
 }: {
   searchParams: Promise<{ status?: string; category?: string }>;
 }) {
+  await connection();
   const params = await searchParams;
 
   let duels: Awaited<ReturnType<typeof getDuels>> = [];

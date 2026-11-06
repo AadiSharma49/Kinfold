@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Section, SectionHeading } from "@/components/section";
 import { getDataStats, KinfoldApiError } from "@/lib/kinfold-api";
 
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 export const instant = false;
 
 export default async function DataPage() {
+  await connection();
+
   let stats;
   let errored = false;
   try {

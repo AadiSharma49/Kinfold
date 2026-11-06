@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { ShieldCheck, Receipt, Lock, Database } from "lucide-react";
 import { Section, SectionHeading } from "@/components/section";
 import { LoopDiagram } from "@/components/loop-diagram";
@@ -121,6 +122,11 @@ const faqs = [
 ];
 
 export default async function Home() {
+  // Opt out of prerendering before any fetch runs: the Next fetch layer
+  // reads the clock internally, which trip the cache-components
+  // "Date.now() during prerender" check.
+  await connection();
+
   const openCrowdDuel = await getDuels({ status: "open" })
     .then((duels) => duels.find((d) => CROWD_CATEGORIES.includes(d.category)) ?? null)
     .catch(() => null); // Backend down on a fresh checkout shouldn't break the homepage.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Section } from "@/components/section";
 import { DuelCard } from "@/components/duel-card";
 import { ListBugForm } from "@/components/list-bug-form";
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 export const instant = false;
 
 export default async function ListingsPage() {
+  await connection();
+
   let listings: Awaited<ReturnType<typeof getDuels>> = [];
   let errored = false;
   try {
