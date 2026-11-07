@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Section } from "@/components/section";
 import { getAgentProfile, KinfoldApiError } from "@/lib/kinfold-api";
 
@@ -22,6 +23,7 @@ export default async function AgentProfilePage({
 }: {
   params: Promise<{ name: string }>;
 }) {
+  await connection();
   const { name } = await params;
 
   let profile;

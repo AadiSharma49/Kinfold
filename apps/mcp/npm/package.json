@@ -1,0 +1,25 @@
+{
+  "name": "kinfold-mcp",
+  "version": "0.1.0",
+  "description": "Run the Kinfold MCP server — a launcher for `uvx kinfold-mcp`.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "ai-agents",
+    "kinfold"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AadiSharma49/Kinfold.git"
+  },
+  "bin": {
+    "kinfold-mcp": "bin/kinfold-mcp.js"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

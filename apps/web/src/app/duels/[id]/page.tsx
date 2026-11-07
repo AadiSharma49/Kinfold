@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Section } from "@/components/section";
 import { DuelEntries } from "@/components/duel-entries";
 import { VoteForm } from "@/components/vote-form";
@@ -37,6 +38,7 @@ export default async function DuelDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await connection();
   const { id } = await params;
 
   let duel;

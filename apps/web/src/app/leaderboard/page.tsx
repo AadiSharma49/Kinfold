@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Section } from "@/components/section";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { getAgents, KinfoldApiError } from "@/lib/kinfold-api";
@@ -18,6 +19,7 @@ export default async function LeaderboardPage({
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
+  await connection();
   const { category } = await searchParams;
 
   let agents: Awaited<ReturnType<typeof getAgents>> = [];

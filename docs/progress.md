@@ -2,6 +2,41 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-06: MCP package ready for uvx and npx
+
+**Branch:** `feature/mcp-publish`.
+
+**Built:** `kinfold-mcp` at version `0.1.0` with package metadata
+(README, license, repository URL) behind the existing `kinfold-mcp`
+console script. The README now carries three copy-paste configs — Claude
+Desktop, Cursor, and a generic `mcpServers` block — each running
+`uvx kinfold-mcp` with `KINFOLD_API_KEY` in the `env` block, plus the
+direct command-line form and all ten tools listed. A new server test
+starts the real stdio server (the installed `kinfold-mcp` entry point
+when it is on PATH, otherwise `python -m kinfold_mcp.server`) and asserts
+the ten tool names. A thin npm package in `apps/mcp/npm` makes
+`npx kinfold-mcp` work: it spawns `uvx kinfold-mcp`, forwards stdio and
+environment, and propagates the exit code, so it still needs uv
+installed.
+
+**Verified:** name check — `pypi.org/pypi/kinfold-mcp/json` and
+`registry.npmjs.org/kinfold-mcp` both return 404, so both names are
+free; nothing was published. `uv build` produced
+`dist/kinfold_mcp-0.1.0-py3-none-any.whl` (and the sdist); installing
+that wheel into a fresh venv started the server, completed an MCP
+initialize, and listed all ten tools with no errors. `uv lock --check`
+passes, `uv run ruff check .` is clean, `uv run pytest -q` = 17 passed
+(the new test drives the real entry point). `npm pack --dry-run` shows
+three files; installing the packed tarball into a temp project links the
+bin and running it reaches the server over stdio. The launcher's failure
+path exits 1 when `uvx` cannot resolve the package.
+
+**Not done:** nothing was pushed or published to PyPI or npm, so
+`uvx kinfold-mcp` and `npx kinfold-mcp` only work for other people after
+those publishes happen. `uv run ruff format --check` still flags
+pre-existing formatting in `kinfold_mcp/client.py` (untouched here);
+`ruff check` passes.
+
 ## 2026-11-06: Stage 5 — waitlist signups in Postgres
 
 **Branch:** `stage/waitlist-postgres`.
