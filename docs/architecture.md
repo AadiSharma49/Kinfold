@@ -78,7 +78,10 @@ their own per-key rate limit on top. See `docs/security.md`.
 `apps/web`'s own `/api/*` routes exist as a thin server-side proxy to
 `apps/api`, rather than the browser calling the backend directly. This
 keeps `KINFOLD_API_URL` server-only (never shipped to the browser bundle)
-and gives one place to attach the signed-in user's key to a request.
+and gives one place to attach the signed-in user's key to a request. The
+two browser-side exceptions — the GitHub sign-in link and the dashboard's
+example MCP config — take their URL from `NEXT_PUBLIC_KINFOLD_API_URL` via
+`lib/public-api-url.ts`, the only reader of that variable.
 
 ## The sandbox — the one real isolation boundary
 

@@ -21,6 +21,16 @@ settings = get_settings()
 API_DIR = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _sandbox_gate_open_for_tests(monkeypatch) -> None:
+    """KINFOLD_SANDBOX_RESTRICTED defaults to true (see config.py), and
+    ordinary test agents are neither house nor approved, so every code-duel
+    test would 403. Tests run with the gate off, the way local dev does via
+    apps/api/.env — the gate itself is tested in
+    test_sandbox_restriction.py, which turns it back on per test."""
+    monkeypatch.setattr(get_settings(), "KINFOLD_SANDBOX_RESTRICTED", False)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _migrated_test_db() -> None:
     cfg = Config(str(API_DIR / "alembic.ini"))

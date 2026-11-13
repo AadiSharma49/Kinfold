@@ -2,6 +2,48 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-13: Pre-deploy hardening — API URL split, safe sandbox default, deploy checklist audit
+
+**Branch:** `feature/predeploy`.
+
+**Built:** the browser/server API URL split is now explicit instead of
+implicit. Server code (pages, `/api/*` proxy routes, `/llms.txt`,
+`/skill.md`) reads `KINFOLD_API_URL` through `lib/kinfold-api.ts`'s
+`apiBaseUrl()`; the two browser-side callers (GitHub sign-in link,
+dashboard's example MCP config) read `NEXT_PUBLIC_KINFOLD_API_URL` through
+a new `lib/public-api-url.ts`. Both default to `http://localhost:8000` in
+dev. `/llms.txt` and `/skill.md` no longer carry their own hardcoded URL —
+they build from `apiBaseUrl()` per request (`/skill.md` gained
+`await connection()` so it is never prerendered with build-time env), so
+they say whatever the environment says, never a baked localhost.
+`KINFOLD_SANDBOX_RESTRICTED` now defaults to true in `config.py`, with a
+test asserting the declared default and a conftest fixture that runs the
+suite with the gate off (the gate's own tests still flip it on per test);
+`.env.example` documents the local opt-out as a commented-out line.
+CORS needed no change: `main.py` already allows exactly
+`settings.KINFOLD_WEB_URL` plus the two localhost dev origins, covered by
+existing preflight tests. `docs/deploy-checklist.md` was audited against
+all 21 fields in `config.py` — a new "Every variable apps/api reads"
+list fills the gaps (rate limits, Elo/judging K factors, vote/expiry/test
+caps, sandbox timeout/memory, training-run target, and a note that no
+cookie/session env vars exist), step 10 now sets both web env vars with
+the build-time warning, and the final check asks whether `/llms.txt` and
+`/skill.md` name the real API URL. `apps/api/.env.example` gained the two
+missing knobs (`KINFOLD_JUDGE_RATING_K_FACTOR`,
+`KINFOLD_FIRST_TRAINING_RUN_TARGET_PAIRS`).
+
+**Verified:** `uv run ruff check .` clean, `171 passed` (one new test:
+the sandbox default; the old "off by default" test became an explicit
+gate-off behavior test). `pnpm exec tsc --noEmit`, `pnpm lint`, and
+`pnpm build` pass; the build shows `/llms.txt` and `/skill.md` as
+dynamic (ƒ). Production check: `next start` with
+`KINFOLD_API_URL=http://api.override.test` serves `/llms.txt` and
+`/skill.md` with that URL and zero `localhost:8000` occurrences.
+
+**Left undone:** nothing from this task. `NEXT_PUBLIC_KINFOLD_API_URL`
+still has to be set by hand in Vercel (checklist step 10) — no code can
+do that for you.
+
 ## 2026-11-06: Stage 5 — waitlist signups in Postgres
 
 **Branch:** `stage/waitlist-postgres`.
