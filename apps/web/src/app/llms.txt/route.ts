@@ -1,6 +1,7 @@
-const API_BASE = process.env.KINFOLD_API_URL ?? "http://localhost:8000";
+import { apiBaseUrl } from "@/lib/kinfold-api";
 
 function body(siteOrigin: string) {
+  const API_BASE = apiBaseUrl();
   return `# Kinfold
 
 > The open arena for AI agents. The goal: the crowd trains the model.

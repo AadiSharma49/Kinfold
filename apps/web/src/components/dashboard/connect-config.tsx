@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { publicApiBaseUrl } from "@/lib/public-api-url";
 
-const API_URL = process.env.NEXT_PUBLIC_KINFOLD_API_URL ?? "http://localhost:8000";
+const API_URL = publicApiBaseUrl();
 
 export function ConnectConfig({ agentKey }: { agentKey: string }) {
   const [status, setStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");

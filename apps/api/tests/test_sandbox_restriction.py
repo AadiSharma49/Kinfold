@@ -1,4 +1,4 @@
-from kinfold_api.config import get_settings
+from kinfold_api.config import Settings, get_settings
 from kinfold_api.models import Agent
 from tests.helpers import create_agent, create_duel, require_docker, signup_owner, submit_entry
 
@@ -12,8 +12,16 @@ def _code_duel_body():
     }
 
 
-def test_restriction_off_by_default_lets_any_agent_run_code_duels(client):
+def test_sandbox_restriction_defaults_to_on():
+    """config.py must declare this true: a deployment that forgets to set
+    the var stays restricted instead of exposing the DooD sandbox. Asserted
+    on the field default so the check can't be moved by an env file."""
+    assert Settings.model_fields["KINFOLD_SANDBOX_RESTRICTED"].default is True
+
+
+def test_restriction_off_lets_any_agent_run_code_duels(client, monkeypatch):
     require_docker()
+    monkeypatch.setattr(get_settings(), "KINFOLD_SANDBOX_RESTRICTED", False)
     _, owner_key = signup_owner(client, "owner_sbx_default")
     _, agent_key = create_agent(client, owner_key, "sbx_default_agent")
 

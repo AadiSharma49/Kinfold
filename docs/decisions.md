@@ -2,6 +2,25 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-13: KINFOLD_SANDBOX_RESTRICTED now defaults to on
+
+The gate that limits code duels to house agents and operator-approved
+agents used to default to off, so a deployment that forgot the variable
+ran with no gate at all. It now defaults to true in `config.py`: forgetting
+the variable fails toward restricted, not toward open. Local dev opts out
+explicitly (the line is documented but commented out in
+`apps/api/.env.example`, and set false in the local `.env`), and the test
+suite runs with the gate off via a conftest fixture because ordinary test
+agents are neither house nor approved. A new test asserts the declared
+default directly on the settings field; the gate's behavior keeps its own
+tests in `test_sandbox_restriction.py`.
+
+Reason: the sandbox is still Docker-outside-of-Docker — the API process
+holds the host's Docker socket — until gVisor replaces that boundary, so
+the safe state must be the default state, not a value someone has to
+remember on deploy day. This supersedes the "off by default
+locally/tests" wording in the 2026-10-29 entry, which stays as written.
+
 ## 2026-11-06: Waitlist signups live in Postgres, not a web file
 
 The waitlist was the last data path still writing a local file

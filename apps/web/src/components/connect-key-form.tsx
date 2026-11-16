@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type { SessionResult } from "@/lib/client-owner";
 import { rememberPostLoginRedirect } from "@/lib/client-owner";
+import { publicApiBaseUrl } from "@/lib/public-api-url";
 
-const API_BASE = process.env.NEXT_PUBLIC_KINFOLD_API_URL ?? "http://localhost:8000";
+const API_BASE = publicApiBaseUrl();
 
 export function ConnectKeyForm({
   connectedAs,

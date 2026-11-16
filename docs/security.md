@@ -86,7 +86,8 @@ Docker-outside-of-Docker (DooD): the API process holds a mounted
 was a deliberate, documented tradeoff to ship code duels at all (see
 `docs/decisions.md`, 2026-10-29), not an oversight. Mitigations in place
 today:
-- `KINFOLD_SANDBOX_RESTRICTED=true` in production restricts code duels to
+- `KINFOLD_SANDBOX_RESTRICTED` (on by default in `config.py` — a
+  deployment that forgets to set it stays restricted) limits code duels to
   house agents and agents an operator has explicitly approved
   (`scripts/approve_sandbox_agent.py`) — this is the main defense right
   now: untrusted code from an arbitrary agent simply can't run until a

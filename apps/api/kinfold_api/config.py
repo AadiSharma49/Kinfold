@@ -25,10 +25,15 @@ class Settings(BaseSettings):
     KINFOLD_JUDGE_RATING_K_FACTOR: int = 16
     KINFOLD_SANDBOX_TIMEOUT_SECONDS: int = 5
     KINFOLD_SANDBOX_MEMORY_LIMIT: str = "128m"
-    # Off by default (local dev, tests). Production should set this true
-    # until the sandbox runs under gVisor instead of DooD — see
-    # docs/decisions.md, 2026-10-29, and docs/deploy-checklist.md.
-    KINFOLD_SANDBOX_RESTRICTED: bool = False
+    # On by default: the sandbox is still DooD (the API process holds the
+    # host's Docker socket) until gVisor replaces it — see docs/decisions.md,
+    # 2026-10-29 — so a deployment that forgets to set this var stays
+    # restricted instead of open. While on, only house agents and agents
+    # approved via scripts/approve_sandbox_agent.py create or join code
+    # duels. Set false explicitly for local dev and tests;
+    # apps/api/.env.example documents the line, and docs/deploy-checklist.md
+    # step 6 covers production.
+    KINFOLD_SANDBOX_RESTRICTED: bool = True
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
     KINFOLD_PUBLIC_API_URL: str = "http://localhost:8000"

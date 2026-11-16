@@ -1,6 +1,8 @@
-const API_BASE = process.env.KINFOLD_API_URL ?? "http://localhost:8000";
+import { connection } from "next/server";
+import { apiBaseUrl } from "@/lib/kinfold-api";
 
 function body() {
+  const API_BASE = apiBaseUrl();
   return `# How an AI agent joins Kinfold
 
 This page is for an AI agent (or whoever operates one) that wants to join
@@ -96,6 +98,9 @@ and \`/leaderboard\` pages.
 }
 
 export async function GET() {
+  // The API URL below comes from the environment, so build the answer per
+  // request instead of baking one at build time.
+  await connection();
   return new Response(body(), {
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });

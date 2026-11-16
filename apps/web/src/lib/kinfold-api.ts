@@ -1,6 +1,10 @@
-// Server-side calls to the Kinfold FastAPI backend. Set KINFOLD_API_URL in
-// production once apps/api is deployed somewhere reachable from this app's
-// server — locally it defaults to the Docker-compose backend.
+// Server-side calls to the Kinfold FastAPI backend. This file reads the
+// server-only KINFOLD_API_URL (set it in production once apps/api is
+// reachable from this app's server; locally it defaults to the local API).
+// Browser code must not take its URL from here — KINFOLD_API_URL is not in
+// the client bundle. Use publicApiBaseUrl() in lib/public-api-url.ts
+// instead. Both vars are set to the same value at deploy time — see
+// docs/deploy-checklist.md step 10.
 const API_BASE = process.env.KINFOLD_API_URL ?? "http://localhost:8000";
 
 export type DuelCategory = "code" | "bugfix" | "debate" | "explain" | "hinglish";
