@@ -2,6 +2,63 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-16: Deploy rehearsal — ran the checklist for real, found and fixed two real bugs
+
+**Branch:** `feature/deploy-rehearsal`.
+
+**Built:** `apps/api/scripts/smoke_test.sh` — health, signup, agent
+creation, duel creation against any base URL. Correctly treats a 404
+from dev-signup as a pass (production has it disabled on purpose) and
+accepts an existing owner key as its second argument to check the rest
+in that case; a real failure (bad URL, unexpected status) exits 1 with
+a clear message. Uses a crowd-category duel on purpose, so it needs no
+sandbox approval to run clean against a brand-new deployment.
+
+**Ran, not just read:** `docker-compose.prod.yml`, isolated with
+`-p kinfold-rehearsal` so it couldn't touch the real local dev database
+or its volumes (both compose files use the same volume names). Built
+the image, ran all 18 migrations fresh, checked health through Caddy
+with `CADDY_DOMAIN=localhost` (its internal CA, not ACME — confirmed a
+real, usable way to rehearse the HTTPS step without a domain), ran
+`scripts/seed.py`, exercised the sandbox-restriction → approve →
+resolved-sandbox-verdict path with a brand-new non-house agent, ran and
+restored a real `pg_dump` backup with matching row counts, and ran
+`smoke_test.sh` against the stack in all three real modes (dev-signup
+on; dev-signup off with no key, correctly skipping with exit 0;
+dev-signup off with a provided key, full pass) plus the genuine-failure
+path (unreachable host, exit 1).
+
+**Two real bugs found this way, both fixed:**
+1. The checklist's own documented commands for every step after the
+   first `up` were missing `--env-file .env.prod` — Compose needs it to
+   parse the file at all, so migrating, seeding, approving an agent,
+   and the cron backup entry all failed exactly as written. Fixed the
+   checklist (a one-line alias for interactive use, the full explicit
+   form with an absolute path for cron) and verified the fix actually
+   works, not just that the old text was wrong.
+2. `scripts/seed.py`'s two house agents shared one owner, which the
+   pre-deploy-hardening merge's new owner-separation rule blocks from
+   dueling each other — invisible on the already-seeded dev database,
+   fatal on a genuinely fresh one. Fixed the same way as
+   `scripts/seed_house_agents.py`: one owner per house agent.
+
+See `docs/decisions.md`, 2026-11-16, for the full writeup.
+
+**Verified:** `uv run ruff check .` clean, `181 passed` (unchanged —
+`seed.py` and the shell script have no dedicated test file; both were
+verified by actually running them against the live rehearsal stack,
+documented above). `pnpm lint` and `pnpm exec tsc --noEmit` pass
+(no web changes this branch).
+
+**Left undone:** steps 1–5 (buying a server, DNS, a real GitHub OAuth
+app, SSH, cloning) and step 12 (gVisor) can't be rehearsed without real
+infrastructure — unchanged, correctly out of scope. Step 10 (pointing
+Vercel at the real API) is explicitly not Claude's to do; `/llms.txt`/
+`/skill.md` dynamic behavior was already verified in the earlier
+pre-deploy-hardening work, not re-verified here since this rehearsal
+only ran the backend compose stack. A real GitHub OAuth sign-in was
+not exercised, same standing note as earlier entries.
+
 ## 2026-11-16: House agents backed by real Groq inference
 
 **Branch:** `feature/house-agents`.

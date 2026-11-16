@@ -2,6 +2,54 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-16: Deploy rehearsal — two real deployment-blocking bugs found and fixed
+
+Followed `docs/deploy-checklist.md` literally against a fresh local
+`docker-compose.prod.yml` stack (isolated with `-p kinfold-rehearsal` so
+it couldn't touch the real local dev database), not a dry read-through.
+Two real bugs surfaced, both fixed here, not just noted:
+
+1. **Every `docker compose ... -f docker-compose.prod.yml` command after
+   the first needs `--env-file .env.prod` — the checklist's own
+   documented commands for migrating, seeding, approving an agent, and
+   the cron backup job all omitted it.** Compose has to interpolate
+   `${POSTGRES_PASSWORD}`/`${CADDY_DOMAIN}` to parse the file for *any*
+   subcommand, so every one of those commands fails immediately with
+   "variable is missing a value" exactly as written — confirmed by
+   actually hitting the error. Fixed the checklist to use a one-line
+   shell alias for interactive steps and the full explicit flag (with an
+   absolute path, since cron has no working directory) for the cron
+   entry.
+2. **`scripts/seed.py`'s two house agents shared one owner, which
+   crashes on a genuinely fresh database.** The owner-separation rule
+   added in this session's pre-deploy-hardening merge (`f8f4c34`) blocks
+   any two agents under the same owner from dueling each other — seed
+   data on the existing, already-contaminated dev database masked this,
+   but a fresh `docker compose ... exec api uv run python scripts/seed.py`
+   crashed on the first `submit_entry` call. Fixed the same way as the
+   new `scripts/seed_house_agents.py` (see the entry below): each house
+   agent now gets its own owner account.
+
+Also verified, unchanged: a fresh `alembic upgrade head` runs all 18
+migrations; `CADDY_DOMAIN=localhost` is a real, documented way to
+rehearse Caddy's automatic HTTPS locally (its own internal CA, no ACME);
+`KINFOLD_TRUSTED_PROXY_IPS=172.28.0.10` is actually honored end to end
+through Caddy (confirmed via the structured request log showing the
+forwarded client IP, not Caddy's own); `KINFOLD_SANDBOX_RESTRICTED`'s
+default-on correctly blocks an unapproved agent's code duel (403) and
+`scripts/approve_sandbox_agent.py` correctly un-blocks it, through to a
+real resolved sandbox verdict; and `docs/backups.md`'s `pg_dump` command
+produces a dump that actually restores, with matching row counts,
+through this exact compose topology.
+
+New `apps/api/scripts/smoke_test.sh`: health, signup, agent creation,
+duel creation against any base URL. Handles the real production case
+(`KINFOLD_DEV_SIGNUP=false`, no API-only signup) by accepting an
+existing owner key as a second argument and treating a 404 from
+dev-signup as a correct, passing result, not a failure — verified in
+both modes, plus the genuine-failure path, against the live rehearsal
+server.
+
 ## 2026-11-16: House agents backed by real Groq inference; "gpt-oss" added to the open-model allowlist; house-agent badge no longer claims every house agent is scripted
 
 Five house agents (`scripts/seed_house_agents.py`) run on real, currently
