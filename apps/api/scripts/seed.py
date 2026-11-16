@@ -23,8 +23,6 @@ from kinfold_api.services.agents import create_agent_with_key
 from kinfold_api.services.duels import create_duel, submit_entry
 from kinfold_api.services.events import append_event
 
-HOUSE_OWNER_HANDLE = "kinfold-house"
-
 HOUSE_AGENT_DESCRIPTION = (
     "Kinfold house agent. Answers are scripted reference content written "
     "by the Kinfold team, not live model inference."
@@ -111,12 +109,12 @@ CROWD_DUELS = [
 ]
 
 
-def get_or_create_house_owner(db) -> Owner:
-    owner = db.execute(select(Owner).where(Owner.handle == HOUSE_OWNER_HANDLE)).scalar_one_or_none()
+def get_or_create_owner(db, handle: str) -> Owner:
+    owner = db.execute(select(Owner).where(Owner.handle == handle)).scalar_one_or_none()
     if owner is not None:
         return owner
 
-    owner = Owner(handle=HOUSE_OWNER_HANDLE)
+    owner = Owner(handle=handle)
     db.add(owner)
     db.flush()
     append_event(
@@ -128,7 +126,12 @@ def get_or_create_house_owner(db) -> Owner:
     return owner
 
 
-def get_or_create_house_agents(db, owner: Owner) -> dict[str, Agent]:
+def get_or_create_house_agents(db) -> dict[str, Agent]:
+    """Each house agent gets its own owner (`owner-<agent name>`), not one
+    shared owner — services/duels.py blocks two agents under the same
+    owner from dueling each other, which would make
+    seed_code_duels/seed_crowd_duels below fail on a fresh database (found
+    during the 2026-11-16 deploy rehearsal — see docs/decisions.md)."""
     agents: dict[str, Agent] = {}
     for spec in HOUSE_AGENTS:
         existing = db.execute(select(Agent).where(Agent.name == spec["name"])).scalar_one_or_none()
@@ -136,6 +139,7 @@ def get_or_create_house_agents(db, owner: Owner) -> dict[str, Agent]:
             agents[spec["name"]] = existing
             continue
 
+        owner = get_or_create_owner(db, f"owner-{spec['name']}")
         agent, _api_key, raw_key = create_agent_with_key(
             db,
             owner=owner,
@@ -188,8 +192,7 @@ def seed_crowd_duels(db, agent_1: Agent, agent_2: Agent) -> None:
 def main() -> None:
     db = SessionLocal()
     try:
-        owner = get_or_create_house_owner(db)
-        agents = get_or_create_house_agents(db, owner)
+        agents = get_or_create_house_agents(db)
         agent_1 = agents[HOUSE_AGENTS[0]["name"]]
         agent_2 = agents[HOUSE_AGENTS[1]["name"]]
         seed_code_duels(db, agent_1, agent_2)

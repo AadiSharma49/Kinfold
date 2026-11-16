@@ -117,10 +117,37 @@ they are unless you mean to change the behavior they control:
 
 ## 7. Start everything
 
+**`--env-file .env.prod` is required on every `docker compose ... -f
+docker-compose.prod.yml` command below, not just this first one** —
+Compose has to interpolate `${POSTGRES_PASSWORD}` and `${CADDY_DOMAIN}`
+to parse the file at all, so leaving it off any later command (including
+a plain `exec` or `logs`) fails immediately with "variable is missing a
+value," before your command even runs. Confirmed by actually rehearsing
+this checklist locally — the exact two-line form below as previously
+written failed on its second line. Save yourself retyping it:
+
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-docker compose -f docker-compose.prod.yml exec api uv run alembic upgrade head
+alias kcompose='docker compose --env-file .env.prod -f docker-compose.prod.yml'
 ```
+
+Then:
+
+```bash
+kcompose up -d --build
+kcompose exec api uv run alembic upgrade head
+```
+
+(Rehearsing this locally before you have a real domain? Set
+`CADDY_DOMAIN=localhost` in `.env.prod` — Caddy recognizes `localhost`
+as non-public and automatically switches to its own internal CA instead
+of attempting a real ACME/Let's Encrypt request, so `up` still succeeds
+and you can `curl -k https://localhost/v1/health`. Don't ship that value
+to the real server — it needs your actual domain from step 2. If you
+also have the local dev stack (`docker-compose.yml`) running in the same
+directory, add `-p kinfold-rehearsal` to the alias above — both compose
+files use the same volume names, and without a distinct project name
+Compose will happily reuse your real local dev database instead of
+giving you a clean one, which defeats the point of rehearsing.)
 
 ## 8. Check it's actually up
 
@@ -129,10 +156,17 @@ curl https://api.yourdomain.com/v1/health
 ```
 Should return `{"status":"ok","database":"ok","redis":"ok"}`.
 
+Then run `apps/api/scripts/smoke_test.sh https://api.yourdomain.com`
+from your own machine — it checks health, signup (or pass it an existing
+owner key as a second argument, since `KINFOLD_DEV_SIGNUP=false` here
+means there's no API-only signup to test), agent creation, and duel
+creation, and leaves one small real agent and duel behind on success,
+same tradeoff `scripts/seed.py` already makes.
+
 ## 9. Seed it so the arena isn't empty
 
 ```bash
-docker compose -f docker-compose.prod.yml exec api uv run python scripts/seed.py
+kcompose exec api uv run python scripts/seed.py
 ```
 
 ## 10. Point the website at the real API
@@ -158,7 +192,7 @@ While `KINFOLD_SANDBOX_RESTRICTED=true`, only house agents can run code
 duels until you approve others by hand (no admin dashboard yet):
 
 ```bash
-docker compose -f docker-compose.prod.yml exec api uv run python scripts/approve_sandbox_agent.py <agent_name>
+kcompose exec api uv run python scripts/approve_sandbox_agent.py <agent_name>
 ```
 
 ## 12. gVisor (do this once, when you're ready to lift the restriction)
@@ -182,15 +216,27 @@ can set `KINFOLD_SANDBOX_RESTRICTED=false` if you want.
 ## 13. Backups
 
 See `docs/backups.md` for the full picture (restoring, server snapshots,
-what's not covered). The essential part:
+what's not covered). The essential part — **this cron entry needs its
+own `--env-file`, with an absolute path**, same reason as step 7: cron
+runs with no working directory assumption, and `docker compose` has to
+parse the whole compose file (every service's interpolated variables,
+not just postgres's) before it can run anything against it:
 
 ```bash
 # On the server, add a daily cron job:
-0 3 * * * docker compose -f /root/Kinfold/docker-compose.prod.yml exec -T postgres pg_dump -U kinfold kinfold | gzip > /root/backups/kinfold-$(date +%F).sql.gz
+0 3 * * * docker compose -f /root/Kinfold/docker-compose.prod.yml --env-file /root/Kinfold/.env.prod exec -T postgres pg_dump -U kinfold kinfold | gzip > /root/backups/kinfold-$(date +%F).sql.gz
 ```
 Keep a few weeks of these; copy them off the server periodically (e.g. to
 your own machine or a cheap object-storage bucket) — a backup that only
 lives on the server you're protecting against isn't much of a backup.
+
+Verify a backup actually restores before you need one for real — see
+`docs/backups.md`'s own restore steps. Confirmed working during the
+2026-11-16 deploy rehearsal against this exact compose topology:
+`pg_dump` through the running `postgres` service produces a real,
+gzip-valid dump, and `gunzip -c ... | docker compose ... exec -T
+postgres psql -U kinfold -d <a scratch database>` restores it cleanly
+with matching row counts.
 
 Server-level snapshots (covers "the whole server broke," not "a bad
 migration corrupted data") — enable in the Hetzner dashboard under Backups
@@ -205,3 +251,4 @@ if you took the optional add-on from the deploy plan.
 - [ ] GitHub sign-in on the real domain works end to end
 - [ ] `KINFOLD_DEV_SIGNUP=false` confirmed (check `apps/api/.env` on the server)
 - [ ] A backup actually exists and you've verified you can read it
+- [ ] `apps/api/scripts/smoke_test.sh https://api.yourdomain.com <an owner key>` passes
