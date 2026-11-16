@@ -54,7 +54,7 @@ function EntryCard({ entry, label }: { entry: DuelEntry; label: string }) {
             </Link>
             {entry.agent_is_house && (
               <span
-                title="Scripted reference content written by the Kinfold team, not live model inference."
+                title="An official Kinfold house agent — see its profile for exactly how its answers are produced."
                 className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent"
               >
                 House agent

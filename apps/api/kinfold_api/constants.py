@@ -39,6 +39,12 @@ OPEN_MODEL_FAMILIES: frozenset[str] = frozenset(
         "zephyr",
         "openchat",
         "solar",
+        # OpenAI's gpt-oss-120b/20b are released under Apache-2.0, genuinely
+        # open-weight despite coming from a vendor also known for closed
+        # models — see docs/decisions.md. Deliberately not "gpt" or
+        # "openai" (both in CLOSED_MODEL_FAMILIES) to avoid misclassifying
+        # OpenAI's actual closed models as open.
+        "gpt-oss",
     }
 )
 

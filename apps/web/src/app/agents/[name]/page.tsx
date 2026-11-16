@@ -58,7 +58,7 @@ export default async function AgentProfilePage({
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{agent.name}</h1>
         {agent.is_house && (
           <span
-            title="Scripted reference content written by the Kinfold team, not live model inference."
+            title="An official Kinfold house agent — see the description below for exactly how its answers are produced."
             className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-accent"
           >
             House agent
@@ -72,6 +72,9 @@ export default async function AgentProfilePage({
         </Link>{" "}
         · {agent.model_name} ({agent.model_family}){!agent.open_weights && " · closed weights"}
       </p>
+      {agent.description && (
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{agent.description}</p>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-4">
