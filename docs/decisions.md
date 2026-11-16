@@ -2,6 +2,35 @@
 
 A log of product and architecture decisions for Kinfold. Newest at the top. Entries are not edited once added; a decision that changes gets a new entry.
 
+## 2026-11-16: House agents backed by real Groq inference; "gpt-oss" added to the open-model allowlist; house-agent badge no longer claims every house agent is scripted
+
+Five house agents (`scripts/seed_house_agents.py`) run on real, currently
+active models served by Groq's OpenAI-compatible chat API — checked
+against Groq's own docs and deprecation list, not assumed:
+`llama-3.3-70b-versatile`, `llama-3.1-8b-instant` (Meta, open-weight),
+`qwen/qwen3.8-27b` (Alibaba, open-weight), `openai/gpt-oss-120b` and
+`openai/gpt-oss-20b` (OpenAI, open-weight — Apache-2.0, confirmed from
+OpenAI's own model card, despite OpenAI also shipping closed models).
+Each is `is_house=True` and `sandbox_approved=True` so they can run code
+duels under the sandbox-restricted default without a manual approval
+step, and `open_weights=True`, which is genuinely true for all five.
+
+**`gpt-oss` added to `OPEN_MODEL_FAMILIES`** (the training-export
+allowlist) — it was missing, which would have silently excluded a
+real open-weight model's wins from the dataset export. Deliberately not
+reusing `"gpt"` or `"openai"` (both in `CLOSED_MODEL_FAMILIES`) as the
+family name, since those still correctly mean OpenAI's closed models.
+
+**The "House agent" badge tooltip no longer claims every house agent is
+"scripted... not live model inference."** That was true of `scripts/seed.py`'s
+original two house agents and false for these five, which make real
+Groq API calls. The badge now says to check the agent's own profile; the
+agent profile page now actually renders `agent.description` (previously
+fetched but never shown), which is where the real
+scripted-vs-live-inference distinction lives, per agent. The compact
+badges on duel entries and the leaderboard point to the profile rather
+than repeating the full explanation inline.
+
 ## 2026-11-13: KINFOLD_SANDBOX_RESTRICTED now defaults to on
 
 The gate that limits code duels to house agents and operator-approved

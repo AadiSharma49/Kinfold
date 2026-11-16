@@ -2,6 +2,64 @@
 
 One entry per milestone: date, what got built, what's left, anything risky. Newest at the top.
 
+## 2026-11-16: House agents backed by real Groq inference
+
+**Branch:** `feature/house-agents`.
+
+**Built:** `scripts/seed_house_agents.py` creates 5 house agents on real,
+currently-active, open-weight models served by Groq's OpenAI-compatible
+chat API — checked against Groq's own docs and deprecation list, not
+assumed: `house-llama-70b`, `house-llama-8b` (Meta), `house-qwen-27b`
+(Alibaba), `house-gptoss-120b`, `house-gptoss-20b` (OpenAI's open-weight
+line). Each is `is_house=True` and `sandbox_approved=True`. `GROQ_API_KEY`
+is read directly from the environment (never from `Settings` — the
+running server never needs it); without it the script still creates the
+5 agents, prints a clear message, and makes no live call or duel — never
+a fabricated answer standing in for a real one.
+
+Each house agent gets its own owner account, not one shared one — a real
+rule discovered while building this: `services/duels.py`'s owner-separation
+check (added in the pre-deploy-hardening merge, `f8f4c34`) blocks any two
+agents under the same owner from dueling, which would have made every
+house-vs-house duel below fail. `scripts/seed.py`'s original two house
+agents share one owner and have the same latent problem on a genuinely
+fresh database — not fixed here (out of this task's scope), flagged for
+the deploy rehearsal, which runs that script against a fresh stack.
+
+3 real code-duel tasks pair two house agents each (all 5 get at least
+one), with real hidden tests. Each agent's answer is a real Groq
+completion — `tokens_in`/`tokens_out` on its receipt come straight from
+Groq's own `usage` field, and `autonomous=true` with a real measured
+`latency_ms`, not invented numbers. A reply wrapped in markdown code
+fences (common even when told not to) is unwrapped before submission. A
+failed Groq call is reported and that task is skipped, never papered
+over with a guess.
+
+**Also fixed, discovered while building this:** the "House agent" badge
+tooltip claimed every house agent is "scripted... not live model
+inference" — true of `seed.py`'s two agents, false of these five. The
+badge now points to the agent's profile; the profile page now actually
+renders `agent.description` (previously fetched but never shown), which
+is where the real scripted-vs-live distinction lives per agent. Also
+added `"gpt-oss"` to `OPEN_MODEL_FAMILIES` — it was missing, which would
+have silently excluded a real open-weight model's wins from the training
+export.
+
+**Verified:** `uv run ruff check .` clean, `181 passed` (10 new: fence
+stripping, the Groq call against a mocked transport including its error
+path, agent creation fields, idempotency of both agent and duel seeding,
+and a full mocked-but-real-sandbox duel resolution via `require_docker()`).
+`pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build` pass. Ran the real
+script twice against the live dev database with no `GROQ_API_KEY` set:
+created the 5 agents once, printed the documented message both times,
+created nothing twice.
+
+**Left undone:** the live Groq path itself (real network calls, real
+generated code, real hidden-test results) was exercised only through the
+mocked tests above — no real `GROQ_API_KEY` was available in this
+environment to run it end to end. `scripts/seed.py`'s same-owner issue,
+noted above, is not fixed in this branch.
+
 ## 2026-11-13: Pre-deploy hardening — API URL split, safe sandbox default, deploy checklist audit
 
 **Branch:** `feature/predeploy`.
